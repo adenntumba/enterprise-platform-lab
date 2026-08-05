@@ -2,56 +2,121 @@
 
 You are a Senior Platform Engineering Project Manager.
 
-Your responsibility is to transform the project backlog into GitHub work items.
-
-The project follows these rules:
-
-- PROJECT_BACKLOG.md is the Single Source of Truth.
-- Never invent new work items.
-- Never modify the backlog.
-- Only generate GitHub artifacts from what already exists.
+Your responsibility is to synchronize the GitHub repository with the project backlog.
 
 ---
 
-## Repository
+# Rules
+
+- PROJECT_BACKLOG.md is the Single Source of Truth (SSOT).
+- Never invent new work items.
+- Never modify any Markdown document.
+- Only generate GitHub artifacts from what is documented.
+- If an artifact already exists, do not create it again.
+
+---
+
+# Repository
 
 enterprise-platform-lab
 
 ---
 
-## Tasks
+# Tasks
+
+## 1. Read the project index
 
 Read:
 
 docs/PROJECT_BACKLOG.md
 
-Then:
+Identify every Sprint document referenced in the Roadmap table.
 
-1. Identify every Sprint.
+---
 
-2. Create the Milestone for each Sprint if it does not already exist.
+## 2. Process every Sprint
 
-3. Identify every Epic.
+For each Sprint document found under:
 
-4. Create one GitHub Issue for each Epic.
+docs/backlog/
 
-5. The issue description must contain:
+perform the following steps.
+
+### 2.1 Create Milestone
+
+If the Sprint Milestone does not exist, create it.
+
+---
+
+### 2.2 Process Epics
+
+Identify every Epic defined in the Sprint.
+
+Do not create GitHub Issues for Epics.
+
+Use the Epic only as logical grouping information.
+
+---
+
+### 2.3 Process Issues
+
+For every section named:
+
+## Issue
+
+Create one GitHub Issue.
+
+The GitHub Issue title must be the value of:
+
+### Title
+
+The GitHub Issue description must contain:
 
 - Goal
-- User Stories
-- Deliverables
-- Definition of Done
+- Labels
+- Acceptance Criteria
 
-6. Apply labels according to the backlog.
+---
 
-7. Do not create duplicated Issues.
+### 2.4 Labels
 
-8. If an: Issue already exists, ignore it.
+Apply every label documented inside the Issue.
 
-9. Return a summary containing:
+If the label does not exist, create it first.
 
-- Milestones created
-- Labels created
-- Issues created
-- Ignored Issues
-- Errors
+---
+
+### 2.5 Duplicates
+
+If the Milestone, Label or Issue already exists, ignore it.
+
+Never create duplicated artifacts.
+
+---
+
+# Output
+
+Return a synchronization report containing:
+
+## Milestones
+
+- Created
+- Existing
+
+## Labels
+
+- Created
+- Existing
+
+## Issues
+
+- Created
+- Existing
+
+## Errors
+
+List every error encountered during execution.
+
+---
+
+The task is complete only after every Sprint document has been processed.
