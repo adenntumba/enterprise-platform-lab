@@ -13,6 +13,9 @@ Your responsibility is to synchronize the GitHub repository with the project bac
 - Never modify any Markdown document.
 - Only generate GitHub artifacts from what is documented.
 - If an artifact already exists, do not create it again.
+- Do not ask for confirmation.
+- Do not simulate the execution.
+- Execute every task automatically until synchronization is complete.
 
 ---
 
@@ -40,11 +43,21 @@ For each Sprint document found under:
 
 docs/backlog/
 
-perform the following steps.
+execute ALL the following steps.
+
+---
 
 ### 2.1 Create Milestone
 
-If the Sprint Milestone does not exist, create it.
+If the Sprint Milestone does not exist:
+
+- Create it.
+
+Otherwise:
+
+- Mark it as Existing.
+
+Never ask for confirmation.
 
 ---
 
@@ -52,9 +65,9 @@ If the Sprint Milestone does not exist, create it.
 
 Identify every Epic defined in the Sprint.
 
-Do not create GitHub Issues for Epics.
+Epics are logical containers only.
 
-Use the Epic only as logical grouping information.
+Never create GitHub Issues for Epics.
 
 ---
 
@@ -66,57 +79,105 @@ For every section named:
 
 Create one GitHub Issue.
 
-The GitHub Issue title must be the value of:
+The Issue title must be the value of:
 
 ### Title
 
-The GitHub Issue description must contain:
+The Issue description must contain:
 
 - Goal
 - Labels
 - Acceptance Criteria
 
+Associate the Issue with its Sprint Milestone.
+
 ---
 
 ### 2.4 Labels
 
-Apply every label documented inside the Issue.
+For every label referenced by an Issue:
 
-If the label does not exist, create it first.
+If the label does not exist:
+
+- Create it.
+
+Otherwise:
+
+- Reuse the existing label.
+
+Apply all labels to the Issue.
 
 ---
 
 ### 2.5 Duplicates
 
-If the Milestone, Label or Issue already exists, ignore it.
+Before creating any artifact:
 
-Never create duplicated artifacts.
+Verify whether it already exists.
+
+If it exists:
+
+- Do not recreate it.
+- Mark it as Existing.
+
+Artifacts to verify:
+
+- Milestones
+- Labels
+- Issues
+
+---
+
+## 3. Synchronization
+
+Continue processing until ALL Sprint documents have been processed.
+
+Synchronization is only complete when every missing:
+
+- Milestone
+- Label
+- Issue
+
+has been created.
+
+Do not stop after creating only the Issues.
+
+Do not ask for user confirmation.
 
 ---
 
 # Output
 
-Return a synchronization report containing:
+Return a synchronization report using the following format.
 
-## Milestones
+## Synchronization Completed
 
-- Created
-- Existing
+### Milestones
 
-## Labels
+Created
 
-- Created
-- Existing
+Existing
 
-## Issues
+### Labels
 
-- Created
-- Existing
+Created
 
-## Errors
+Existing
 
-List every error encountered during execution.
+### Issues
+
+Created
+
+Existing
+
+### Errors
+
+List every error encountered.
+
+If there are no errors, return:
+
+None.
 
 ---
 
-The task is complete only after every Sprint document has been processed.
+The execution is successful only after every Sprint document has been synchronized with the GitHub repository.
