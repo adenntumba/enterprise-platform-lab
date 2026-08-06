@@ -6,12 +6,35 @@ Your responsibility is to synchronize the GitHub repository with the project bac
 
 ---
 
-# Rules
+## Pre-flight Checks
+
+Before executing any operation, verify that:
+
+- GitHub MCP Server is running.
+- GitHub authentication is valid.
+- The target repository exists.
+- The current user has the required permissions.
+- The working directory is a Git repository.
+- The local repository is synchronized with the remote repository.
+
+If any validation fails:
+
+- Stop execution immediately.
+- Do not perform partial operations.
+- Explain the reason for the failure.
+- Suggest the required corrective action.
+
+Only continue after every validation succeeds.
+
+---
+
+## Rules
 
 - PROJECT_BACKLOG.md is the Single Source of Truth (SSOT).
 - Never invent new work items.
 - Never modify any Markdown document.
 - Only generate GitHub artifacts from what is documented.
+- Never delete GitHub artifacts.
 - If an artifact already exists, do not create it again.
 - Do not ask for confirmation.
 - Do not simulate the execution.
@@ -19,15 +42,15 @@ Your responsibility is to synchronize the GitHub repository with the project bac
 
 ---
 
-# Repository
+## Repository
 
 enterprise-platform-lab
 
 ---
 
-# Tasks
+## Tasks
 
-## 1. Read the project index
+### 1. Read the Project Index
 
 Read:
 
@@ -37,17 +60,17 @@ Identify every Sprint document referenced in the Roadmap table.
 
 ---
 
-## 2. Process every Sprint
+### 2. Process Every Sprint
 
 For each Sprint document found under:
 
 docs/backlog/
 
-execute ALL the following steps.
+execute all the following steps.
 
 ---
 
-### 2.1 Create Milestone
+#### 2.1 Create Milestone
 
 If the Sprint Milestone does not exist:
 
@@ -57,11 +80,9 @@ Otherwise:
 
 - Mark it as Existing.
 
-Never ask for confirmation.
-
 ---
 
-### 2.2 Process Epics
+#### 2.2 Process Epics
 
 Identify every Epic defined in the Sprint.
 
@@ -71,7 +92,7 @@ Never create GitHub Issues for Epics.
 
 ---
 
-### 2.3 Process Issues
+#### 2.3 Process Issues
 
 For every section named:
 
@@ -93,7 +114,7 @@ Associate the Issue with its Sprint Milestone.
 
 ---
 
-### 2.4 Labels
+#### 2.4 Process Labels
 
 For every label referenced by an Issue:
 
@@ -105,20 +126,13 @@ Otherwise:
 
 - Reuse the existing label.
 
-Apply all labels to the Issue.
+Apply every label to the Issue.
 
 ---
 
-### 2.5 Duplicates
+#### 2.5 Prevent Duplicates
 
-Before creating any artifact:
-
-Verify whether it already exists.
-
-If it exists:
-
-- Do not recreate it.
-- Mark it as Existing.
+Before creating any artifact, verify whether it already exists.
 
 Artifacts to verify:
 
@@ -126,58 +140,77 @@ Artifacts to verify:
 - Labels
 - Issues
 
----
+If an artifact already exists:
 
-## 3. Synchronization
-
-Continue processing until ALL Sprint documents have been processed.
-
-Synchronization is only complete when every missing:
-
-- Milestone
-- Label
-- Issue
-
-has been created.
-
-Do not stop after creating only the Issues.
-
-Do not ask for user confirmation.
+- Do not recreate it.
+- Mark it as Existing.
 
 ---
 
-# Output
+## Validation
 
-Return a synchronization report using the following format.
+Before reporting success, verify that:
 
-## Synchronization Completed
+- Every Sprint document has been processed.
+- Every Milestone defined in the backlog exists.
+- Every Label defined in the backlog exists.
+- Every GitHub Issue defined in the backlog exists.
+- Every Issue is associated with its corresponding Milestone.
+- Every Issue contains the required Labels.
+- No duplicate artifacts were created.
 
-### Milestones
+If any validation fails:
 
-Created
+- Do not report success.
+- Explain every failed validation.
+- Return the encountered errors.
 
-Existing
+---
 
-### Labels
+## Output
 
-Created
+Return the synchronization report using the following format.
 
-Existing
+# Synchronization Completed
 
-### Issues
+## Milestones
 
-Created
+### Created
 
-Existing
+...
 
-### Errors
+### Existing
+
+...
+
+## Labels
+
+### Created
+
+...
+
+### Existing
+
+...
+
+## Issues
+
+### Created
+
+...
+
+### Existing
+
+...
+
+## Errors
 
 List every error encountered.
 
-If there are no errors, return:
+If there are no errors:
 
 None.
 
 ---
 
-The execution is successful only after every Sprint document has been synchronized with the GitHub repository.
+The synchronization is successful only after every validation has succeeded.
