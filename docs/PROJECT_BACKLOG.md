@@ -88,6 +88,8 @@ Semantic Versioning
 
 # GitHub Labels
 
+# GitHub Labels
+
 | Label | Description |
 |---------|-------------|
 | documentation | Documentation |
@@ -107,6 +109,44 @@ Semantic Versioning
 | localstack | LocalStack |
 | enhancement | Improvements |
 | bug | Bug Fixes |
+| ci/cd | Continuous Integration and Delivery |
+| github | GitHub Configuration |
+| mcp | AI & MCP Automation |
+| platform | Platform Engineering |
+| storage | Storage Services |
+| database | Databases |
+| monitoring | Monitoring |
+| logging | Logging |
+| tracing | Distributed Tracing |
+| networking-edge | Edge Infrastructure |
+| raspberry-pi | Raspberry Pi |
+| pihole | Pi-hole |
+| unbound | Unbound DNS |
+| docker | Docker |
+| helm | Helm Charts |
+| ingress | Ingress Controllers |
+| nginx | NGINX |
+| traefik | Traefik |
+| grafana | Grafana |
+| prometheus | Prometheus |
+| loki | Loki |
+| tempo | Tempo |
+| opentelemetry | OpenTelemetry |
+| harbor | Harbor Registry |
+| minio | MinIO |
+| postgresql | PostgreSQL |
+| redis | Redis |
+| rabbitmq | RabbitMQ |
+| ollama | Ollama |
+| open-webui | Open WebUI |
+| tailscale | Tailscale |
+| wireguard | WireGuard |
+| testing | Testing |
+| performance | Performance |
+| refactor | Refactoring |
+| technical-debt | Technical Debt |
+| dependencies | Dependency Management |
+| chore | Maintenance |
 
 ---
 
