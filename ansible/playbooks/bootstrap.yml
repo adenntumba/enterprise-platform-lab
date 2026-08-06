@@ -1,0 +1,14 @@
+---
+- name: Bootstrap Linux Servers
+
+  hosts: raspberry
+
+  become: true
+
+  gather_facts: true
+
+  roles:
+
+    - role: base/linux
+
+    - role: base/raspberry
