@@ -1,0 +1,3 @@
+---
+# defaults file for linux
+linux_packages: "{{ common_packages }}"

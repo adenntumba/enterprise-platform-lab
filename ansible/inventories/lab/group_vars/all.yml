@@ -1,0 +1,53 @@
+timezone: America/Bahia
+
+locale: pt_BR.UTF-8
+
+reboot_if_required: true
+
+update_cache: true
+
+upgrade_packages: true
+
+configure_firewall: false
+
+common_packages:
+
+  - curl
+  - wget
+  - vim
+  - git
+
+  - htop
+  - btop
+
+  - bash-completion
+
+  - dnsutils
+  - net-tools
+  - iproute2
+
+  - jq
+  - tree
+
+  - unzip
+  - zip
+
+  - rsync
+
+  - tcpdump
+  - traceroute
+
+  - iptables
+  - nftables
+
+  - ca-certificates
+
+  - gnupg
+
+  - lsof
+
+  - ncdu
+
+  - acl
+
+  - software-properties-common

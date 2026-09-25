@@ -1,0 +1,7 @@
+---
+# handlers file for linux
+- name: Reboot system
+
+  ansible.builtin.reboot:
+
+    reboot_timeout: 600
