@@ -1,38 +1,48 @@
-Role Name
-=========
+# Raspberry Pi Base Role
 
-A brief description of the role goes here.
+## Overview
 
-Requirements
-------------
+The `base/raspberry` role provides Raspberry Pi platform-specific
+validation for the Enterprise Platform Lab.
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+The role is responsible for identifying and validating Raspberry Pi
+hosts before platform-specific workloads are deployed.
 
-Role Variables
---------------
+## Responsibilities
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+- Validate the operating system.
+- Validate the expected architecture.
+- Detect the Raspberry Pi hardware model.
+- Validate that the target host is a Raspberry Pi.
+- Expose Raspberry Pi platform information.
 
-Dependencies
-------------
+## Design Principles
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+This role intentionally does not:
 
-Example Playbook
-----------------
+- install common Linux packages;
+- configure Pi-hole;
+- configure Unbound;
+- configure Docker;
+- configure Kubernetes;
+- modify firmware;
+- perform hardware tuning.
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
+Those responsibilities belong to other layers of the platform.
 
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
+## Architecture
 
-License
--------
-
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```text
+Linux Host
+    |
+    v
+base/linux
+    |
+    v
+base/raspberry
+    |
+    +-- Platform validation
+    +-- Hardware identification
+    |
+    v
+Platform-specific services

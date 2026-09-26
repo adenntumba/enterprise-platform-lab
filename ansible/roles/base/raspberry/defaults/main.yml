@@ -1,2 +1,5 @@
 ---
-# defaults file for roles/raspberry
+# Raspberry Pi role defaults
+
+raspberry_expected_architecture: aarch64
+raspberry_model_path: /proc/device-tree/model

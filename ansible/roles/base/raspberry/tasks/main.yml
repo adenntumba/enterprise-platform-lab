@@ -1,2 +1,53 @@
 ---
-# tasks file for roles/raspberry
+- name: Validate operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['system'] == "Linux"
+    fail_msg: "This role requires a Linux operating system."
+    success_msg: "Operating system validated: Linux."
+
+- name: Validate architecture
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['architecture'] == raspberry_expected_architecture
+    fail_msg: >-
+      Unsupported architecture:
+      {{ ansible_facts['architecture'] }}.
+      Expected: {{ raspberry_expected_architecture }}.
+    success_msg: >-
+      Architecture validated:
+      {{ ansible_facts['architecture'] }}.
+
+- name: Read Raspberry Pi model
+  ansible.builtin.slurp:
+    src: "{{ raspberry_model_path }}"
+  register: raspberry_model_raw
+  changed_when: false
+
+- name: Set Raspberry Pi model fact
+  ansible.builtin.set_fact:
+    raspberry_model: >-
+      {{ raspberry_model_raw.content
+         | b64decode
+         | trim }}
+
+- name: Validate Raspberry Pi platform
+  ansible.builtin.assert:
+    that:
+      - raspberry_model is search('Raspberry Pi')
+    fail_msg: >-
+      Host does not appear to be a Raspberry Pi.
+      Detected model: {{ raspberry_model }}
+    success_msg: >-
+      Raspberry Pi validated:
+      {{ raspberry_model }}
+
+- name: Display Raspberry Pi platform information
+  ansible.builtin.debug:
+    msg:
+      - "Platform: Raspberry Pi"
+      - "Model: {{ raspberry_model }}"
+      - "Architecture: {{ ansible_facts['architecture'] }}"
+      - "Kernel: {{ ansible_facts['kernel'] }}"
+      - "Distribution: {{ ansible_facts['distribution'] }}"
+      - "Distribution version: {{ ansible_facts['distribution_version'] }}"
