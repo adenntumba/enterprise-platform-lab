@@ -6,4 +6,4 @@
 
   roles:
 
-    - role: linux
+    - role: base/linux

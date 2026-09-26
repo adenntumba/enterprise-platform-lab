@@ -1,5 +1,5 @@
 ---
-- hosts: localhost
-  remote_user: root
+- hosts: raspberry
+  remote_user: pi
   roles:
-    - roles/raspberry
+    - roles/base/raspberry

@@ -6,7 +6,7 @@ reboot_if_required: true
 
 update_cache: true
 
-upgrade_packages: true
+upgrade_packages: false
 
 configure_firewall: false
 
@@ -50,4 +50,4 @@ common_packages:
 
   - acl
 
-  - software-properties-common
+  # - software-properties-common
