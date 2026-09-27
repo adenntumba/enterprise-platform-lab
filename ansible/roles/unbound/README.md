@@ -1,38 +1,37 @@
-Role Name
-=========
+# Unbound Role
 
-A brief description of the role goes here.
+Ansible role responsible for installing and configuring Unbound as a recursive DNS resolver.
 
-Requirements
-------------
+## Responsibilities
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+This role:
 
-Role Variables
---------------
+- Installs Unbound.
+- Configures the Unbound service.
+- Configures DNS listening parameters.
+- Configures DNS access control.
+- Enables DNSSEC trust anchor configuration.
+- Validates the generated configuration.
+- Enables and starts the Unbound service.
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+## Non-Responsibilities
 
-Dependencies
-------------
+This role does not:
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+- Install Pi-hole.
+- Configure Pi-hole.
+- Configure client DNS.
+- Configure the home router.
+- Configure firewall policies outside the Unbound requirements.
 
-Example Playbook
-----------------
+## Architecture
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
-    - hosts: servers
-      roles:
-         - { role: username.rolename, x: 42 }
-
-License
--------
-
-BSD
-
-Author Information
-------------------
-
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).
+```text
+Pi-hole
+   |
+   | DNS upstream
+   v
+Unbound
+   |
+   v
+Recursive DNS

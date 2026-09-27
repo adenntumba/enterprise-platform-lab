@@ -1,2 +1,7 @@
 ---
-# handlers file for roles/unbound
+- name: Restart Unbound
+  ansible.builtin.systemd:
+    name: "{{ unbound_service_name }}"
+    state: restarted
+  become: true
+  when: not ansible_check_mode

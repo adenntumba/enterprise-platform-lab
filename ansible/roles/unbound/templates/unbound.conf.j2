@@ -1,0 +1,33 @@
+server:
+  # Network
+  port: {{ unbound_listen_port }}
+  do-ip4: {{ unbound_enable_ipv4 | ternary("yes", "no") }}
+  do-ip6: {{ unbound_enable_ipv6 | ternary("yes", "no") }}
+
+{% for address in unbound_listen_addresses %}
+  interface: {{ address }}
+{% endfor %}
+
+{% for network in unbound_allowed_networks %}
+  access-control: {{ network }} allow
+{% endfor %}
+
+  # Performance
+  num-threads: {{ unbound_num_threads }}
+  cache-min-ttl: {{ unbound_cache_min_ttl }}
+  cache-max-ttl: {{ unbound_cache_max_ttl }}
+
+  # Privacy and security
+  hide-identity: {{ unbound_hide_identity | ternary("yes", "no") }}
+  hide-version: {{ unbound_hide_version | ternary("yes", "no") }}
+  use-caps-for-id: {{ unbound_use_caps_for_id | ternary("yes", "no") }}
+
+  # Privacy
+  qname-minimisation: yes
+
+  # Harden DNS responses
+  harden-below-nxdomain: yes
+  harden-referral-path: yes
+
+  # Logging
+  verbosity: 1
