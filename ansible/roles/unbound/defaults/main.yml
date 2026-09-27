@@ -1,2 +1,36 @@
 ---
-# defaults file for roles/unbound
+# Unbound package configuration
+unbound_package_name: unbound
+
+# Service configuration
+unbound_service_name: unbound
+unbound_service_enabled: true
+unbound_service_state: started
+
+# Network configuration
+unbound_listen_port: 5335
+
+unbound_listen_addresses:
+  - "127.0.0.1"
+  - "192.168.0.110"
+
+unbound_allowed_networks:
+  - "127.0.0.0/8"
+  - "192.168.0.111/32"
+
+# DNS configuration
+unbound_num_threads: 2
+
+unbound_enable_ipv4: true
+unbound_enable_ipv6: false
+
+# Security
+unbound_hide_identity: true
+unbound_hide_version: true
+
+# Privacy
+unbound_use_caps_for_id: false
+
+# Performance
+unbound_cache_min_ttl: 0
+unbound_cache_max_ttl: 86400

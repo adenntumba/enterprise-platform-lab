@@ -1,0 +1,6 @@
+- hosts: unbound
+  become: true
+  remote_user: pi
+
+  roles:
+    - role: unbound
