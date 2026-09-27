@@ -1,2 +1,346 @@
 ---
-# tasks file for roles/pihole
+# =============================================================================
+# Pi-hole Role
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Pre-flight validation
+# -----------------------------------------------------------------------------
+
+- name: Validate operating system
+  ansible.builtin.assert:
+    that:
+      - ansible_distribution == "Debian"
+      - ansible_distribution_major_version | int >= 13
+    fail_msg: >-
+      Unsupported operating system.
+      Expected Debian 13+.
+      Detected: {{ ansible_distribution }} {{ ansible_distribution_version }}.
+
+- name: Validate architecture
+  ansible.builtin.assert:
+    that:
+      - ansible_architecture == "aarch64"
+    fail_msg: >-
+      Unsupported architecture.
+      Expected aarch64.
+      Detected: {{ ansible_architecture }}.
+
+- name: Validate Pi-hole interface
+  ansible.builtin.assert:
+    that:
+      - pihole_interface in ansible_interfaces
+    fail_msg: >-
+      Network interface {{ pihole_interface }} was not found.
+      Available interfaces: {{ ansible_interfaces | join(', ') }}.
+
+- name: Validate Pi-hole IPv4 address
+  ansible.builtin.assert:
+    that:
+      - pihole_ipv4_address in ansible_all_ipv4_addresses
+    fail_msg: >-
+      Expected Pi-hole address {{ pihole_ipv4_address }} was not found
+      on this host.
+      Detected addresses: {{ ansible_all_ipv4_addresses | join(', ') }}.
+
+- name: Validate Unbound upstream configuration
+  ansible.builtin.assert:
+    that:
+      - pihole_upstream_dns | length > 0
+    fail_msg: "Pi-hole requires at least one upstream DNS server."
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+
+- name: Install Pi-hole dependencies
+  become: true
+  ansible.builtin.apt:
+    name: "{{ pihole_required_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+# -----------------------------------------------------------------------------
+# Installation detection
+# -----------------------------------------------------------------------------
+
+- name: Check whether Pi-hole is already installed
+  become: true
+  ansible.builtin.stat:
+    path: "{{ pihole_binary_path }}"
+  register: pihole_binary
+
+# -----------------------------------------------------------------------------
+# Port 53 pre-flight
+# -----------------------------------------------------------------------------
+
+- name: Check whether DNS port 53 is already in use
+  become: true
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      ss -H -lntup | awk '$5 ~ /:53$/ {print}'
+    executable: /bin/bash
+  register: pihole_port_53_preflight
+  changed_when: false
+  when: not pihole_binary.stat.exists
+
+- name: Display current DNS port usage
+  ansible.builtin.debug:
+    msg: >-
+      DNS port 53 usage:
+      {{
+        pihole_port_53_preflight.stdout
+        if pihole_port_53_preflight.stdout | length > 0
+        else 'free'
+      }}
+  when: not pihole_binary.stat.exists
+
+- name: Fail when port 53 is already occupied
+  ansible.builtin.assert:
+    that:
+      - pihole_port_53_preflight.stdout | length == 0
+    fail_msg: >-
+      Port 53 is already in use on {{ inventory_hostname }}.
+      Pi-hole cannot be safely installed until the existing DNS listener
+      is identified and resolved.
+  when: not pihole_binary.stat.exists
+
+# -----------------------------------------------------------------------------
+# Installer repository
+# -----------------------------------------------------------------------------
+
+- name: Create Pi-hole installer directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ pihole_installer_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: not pihole_binary.stat.exists
+
+- name: Clone official Pi-hole repository
+  become: true
+  ansible.builtin.git:
+    repo: "{{ pihole_repository_url }}"
+    dest: "{{ pihole_installer_dir }}"
+    version: "{{ pihole_repository_version }}"
+    depth: 1
+    force: false
+  when: not pihole_binary.stat.exists
+
+# -----------------------------------------------------------------------------
+# Pi-hole v6 bootstrap configuration
+# -----------------------------------------------------------------------------
+
+- name: Create Pi-hole configuration directory
+  become: true
+  ansible.builtin.file:
+    path: "{{ pihole_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  when: not pihole_binary.stat.exists
+
+- name: Render Pi-hole bootstrap configuration
+  become: true
+  ansible.builtin.template:
+    src: pihole.toml.j2
+    dest: "{{ pihole_config_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  when: not pihole_binary.stat.exists
+
+# -----------------------------------------------------------------------------
+# Installation
+# -----------------------------------------------------------------------------
+
+- name: Install Pi-hole
+  become: true
+  ansible.builtin.command:
+    argv:
+      - "{{ pihole_installer_path }}"
+      - "{{ pihole_installer_unattended_flag }}"
+  when: not pihole_binary.stat.exists
+  register: pihole_installation
+
+# -----------------------------------------------------------------------------
+# Post-installation discovery
+# -----------------------------------------------------------------------------
+
+- name: Verify Pi-hole CLI is available
+  become: true
+  ansible.builtin.command:
+    cmd: pihole -v
+  register: pihole_version
+  changed_when: false
+
+- name: Display Pi-hole version
+  ansible.builtin.debug:
+    var: pihole_version.stdout_lines
+
+- name: Verify Pi-hole FTL binary is available
+  become: true
+  ansible.builtin.command:
+    cmd: pihole-FTL --version
+  register: pihole_ftl_version
+  changed_when: false
+
+- name: Display Pi-hole FTL version
+  ansible.builtin.debug:
+    var: pihole_ftl_version.stdout_lines
+
+# -----------------------------------------------------------------------------
+# Pi-hole configuration
+# -----------------------------------------------------------------------------
+
+- name: Configure Pi-hole upstream DNS
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pihole-FTL
+      - --config
+      - dns.upstreams
+      - "{{ pihole_upstream_dns | to_json }}"
+  notify: Restart Pi-hole FTL
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Configure Pi-hole DNS listening mode
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pihole-FTL
+      - --config
+      - dns.listeningMode
+      - "{{ pihole_dns_listening_mode }}"
+  notify: Restart Pi-hole FTL
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Configure Pi-hole DNS interface
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pihole-FTL
+      - --config
+      - dns.interface
+      - "{{ pihole_dns_interface }}"
+  notify: Restart Pi-hole FTL
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Configure Pi-hole DNS port
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pihole-FTL
+      - --config
+      - dns.port
+      - "{{ pihole_dns_port }}"
+  notify: Restart Pi-hole FTL
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Configure Pi-hole query logging
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pihole-FTL
+      - --config
+      - dns.queryLogging
+      - "{{ pihole_query_logging | lower }}"
+  notify: Restart Pi-hole FTL
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Configure Pi-hole DNSSEC
+  become: true
+  ansible.builtin.command:
+    argv:
+      - pihole-FTL
+      - --config
+      - dns.dnssec
+      - "{{ pihole_dnssec | lower }}"
+  notify: Restart Pi-hole FTL
+  changed_when: true
+  when: not ansible_check_mode
+
+# -----------------------------------------------------------------------------
+# Service
+# -----------------------------------------------------------------------------
+
+- name: Ensure Pi-hole FTL is enabled and started
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ pihole_service_name }}"
+    enabled: "{{ pihole_service_enabled }}"
+    state: "{{ pihole_service_state }}"
+  when: not ansible_check_mode
+
+# -----------------------------------------------------------------------------
+# Configuration validation
+# -----------------------------------------------------------------------------
+
+- name: Validate Pi-hole configuration
+  become: true
+  ansible.builtin.command:
+    cmd: pihole-FTL --config
+  register: pihole_configuration
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Display Pi-hole configuration
+  ansible.builtin.debug:
+    var: pihole_configuration.stdout_lines
+  when: not ansible_check_mode
+
+# -----------------------------------------------------------------------------
+# DNS listener validation
+# -----------------------------------------------------------------------------
+
+- name: Check DNS listeners
+  become: true
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+      ss -lntup | grep -E '(:53[[:space:]]|:53$)'
+    executable: /bin/bash
+  register: pihole_dns_listener
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Validate DNS port 53
+  ansible.builtin.assert:
+    that:
+      - pihole_dns_listener.rc == 0
+    fail_msg: >-
+      Pi-hole DNS listener was not detected on port 53.
+  when: not ansible_check_mode
+
+# -----------------------------------------------------------------------------
+# Service validation
+# -----------------------------------------------------------------------------
+
+- name: Validate Pi-hole FTL service
+  become: true
+  ansible.builtin.systemd:
+    name: "{{ pihole_service_name }}"
+  register: pihole_service_status
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Assert Pi-hole FTL is running
+  ansible.builtin.assert:
+    that:
+      - pihole_service_status.status.ActiveState == "active"
+      - pihole_service_status.status.SubState == "running"
+    fail_msg: >-
+      Pi-hole FTL is not running.
+      ActiveState={{ pihole_service_status.status.ActiveState }}
+      SubState={{ pihole_service_status.status.SubState }}
+  when: not ansible_check_mode

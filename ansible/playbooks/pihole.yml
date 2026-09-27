@@ -1,0 +1,7 @@
+- name: Deploy Pi-hole
+  hosts: pihole
+  become: true
+
+  roles:
+    - role: base/linux
+    - role: pihole
