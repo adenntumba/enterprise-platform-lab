@@ -1,0 +1,28 @@
+# =============================================================================
+# Pi-hole bootstrap configuration
+# =============================================================================
+#
+# This file exists to allow the Pi-hole v6 installer to run unattended.
+#
+# After installation, Pi-hole configuration is managed through the
+# pihole-FTL CLI by the Ansible role.
+#
+# =============================================================================
+
+[dns]
+
+upstreams = [
+{% for upstream in pihole_upstream_dns %}
+  "{{ upstream }}"{% if not loop.last %},{% endif %}
+{% endfor %}
+]
+
+listeningMode = "{{ pihole_dns_listening_mode }}"
+
+interface = "{{ pihole_dns_interface }}"
+
+port = {{ pihole_dns_port }}
+
+queryLogging = {{ pihole_query_logging | lower }}
+
+dnssec = {{ pihole_dnssec | lower }}
