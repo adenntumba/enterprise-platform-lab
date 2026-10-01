@@ -1,10 +1,12 @@
 # 🗺️ Enterprise Platform Lab Roadmap
 
-> **Version:** 1.0.0
+> **Version:** 1.1.0
 >
 > **Status:** In Progress
 >
-> **Last Updated:** 2026-08-05
+> **Owner:** Adenn Tumba
+>
+> **Last Updated:** 2026-10-01
 
 ---
 
@@ -12,47 +14,39 @@
 
 This roadmap defines the strategic evolution of the Enterprise Platform Lab.
 
-Unlike the project backlog, which contains implementation work items, the roadmap provides a high-level view of the platform's evolution through sequential sprints.
+Unlike the project backlog, which contains implementation work items, the roadmap provides a high-level view of the platform's evolution through sequential Sprints.
 
-Each sprint builds upon the previous one, ensuring that the platform evolves in a structured, reproducible and enterprise-oriented manner.
+Each Sprint builds upon the previous one, ensuring that the platform evolves in a structured, reproducible and enterprise-oriented manner.
+
+The roadmap intentionally remains at a strategic level.
+
+Implementation details belong to the corresponding Sprint documents.
 
 ---
 
 # Platform Evolution
 
-```text
 Foundation
-      │
-      ▼
-Edge Infrastructure
-      │
-      ▼
-Linux Baseline
-      │
-      ▼
-Virtualization
-      │
-      ▼
-Infrastructure as Code
-      │
-      ▼
-Kubernetes Platform
-      │
-      ▼
-GitOps
-      │
-      ▼
-Observability
-      │
-      ▼
-DevSecOps
-      │
-      ▼
+↓
+Edge DNS Platform
+↓
+Kubernetes Platform Foundation
+↓
+Kubernetes Platform Services
+↓
+Observability Platform
+↓
+Security & PKI
+↓
+Storage Platform
+↓
+GitOps Platform
+↓
+Platform Applications
+↓
 Hybrid Cloud
-      │
-      ▼
+↓
 Chaos Engineering
-```
 
 ---
 
@@ -60,17 +54,17 @@ Chaos Engineering
 
 | Sprint | Name | Objective | Status |
 |---------|------|-----------|--------|
-| Sprint 00 | Foundation | Establish project standards, documentation and repository structure | 🚧 In Progress |
-| Sprint 01 | Edge DNS Platform | Deploy Raspberry Pi Cluster, Pi-hole and Unbound | ⏳ Planned |
-| Sprint 02 | Linux Baseline | Create the Linux baseline using Ansible | ⏳ Planned |
-| Sprint 03 | Proxmox Platform | Build the virtualization platform and base virtual machines | ⏳ Planned |
-| Sprint 04 | Infrastructure as Code | Provision infrastructure using OpenTofu and Terraform | ⏳ Planned |
-| Sprint 05 | Kubernetes Platform | Deploy the Kubernetes cluster and platform services | ⏳ Planned |
-| Sprint 06 | GitOps | Manage the platform declaratively with ArgoCD | ⏳ Planned |
-| Sprint 07 | Observability | Implement metrics, logs and distributed tracing | ⏳ Planned |
-| Sprint 08 | DevSecOps | Apply security, secrets management and policy enforcement | ⏳ Planned |
-| Sprint 09 | Hybrid Cloud | Integrate LocalStack and AWS-compatible services | ⏳ Planned |
-| Sprint 10 | Chaos Engineering | Validate resilience and disaster recovery scenarios | ⏳ Planned |
+| Sprint 00 | Foundation | Establish project standards, documentation and repository structure | ✅ Completed |
+| Sprint 01 | Edge DNS Platform | Build the Edge DNS platform using Pi-hole and Unbound | ✅ Completed |
+| Sprint 02 | Kubernetes Platform Foundation | Provision the Kubernetes infrastructure with OpenTofu and prepare upstream Kubernetes nodes with Ansible | 🚧 In Progress |
+| Sprint 03 | Kubernetes Platform Services | Establish the core services required by the Kubernetes platform | ⏳ Planned |
+| Sprint 04 | Observability Platform | Implement metrics, logs and distributed tracing | ⏳ Planned |
+| Sprint 05 | Security & PKI | Implement security controls, internal PKI and certificate management | ⏳ Planned |
+| Sprint 06 | Storage Platform | Establish persistent storage and integration with the storage platform | ⏳ Planned |
+| Sprint 07 | GitOps Platform | Manage platform configuration and workloads declaratively with ArgoCD | ⏳ Planned |
+| Sprint 08 | Platform Applications | Deploy and operate platform applications and workloads | ⏳ Planned |
+| Sprint 09 | Hybrid Cloud | Integrate local cloud simulation and AWS-compatible services | ⏳ Planned |
+| Sprint 10 | Chaos Engineering | Validate resilience, failure recovery and disaster scenarios | ⏳ Planned |
 
 ---
 
@@ -96,13 +90,20 @@ Chaos Engineering
 
 At the end of the roadmap, the platform will provide:
 
-- Enterprise DNS
+- Enterprise Edge DNS
+- Proxmox virtualization
 - Infrastructure as Code
-- Automated provisioning
-- Kubernetes Platform
+- Automated infrastructure provisioning
+- Ansible-based configuration management
+- Upstream Kubernetes Platform
+- Kubernetes networking
+- Kubernetes platform services
 - GitOps deployment
 - Enterprise observability
-- DevSecOps
+- Internal PKI
+- Persistent storage
+- Platform applications
+- DevSecOps practices
 - Cloud simulation using LocalStack
 - Production-inspired architecture
 - Comprehensive technical documentation
@@ -113,10 +114,10 @@ At the end of the roadmap, the platform will provide:
 
 The roadmap is considered complete when:
 
-- All roadmap sprints are completed.
+- All roadmap Sprints are completed.
 - Every deliverable is reproducible.
 - All infrastructure is managed as code.
-- Platform services are deployed through GitOps.
+- Platform services are deployed through GitOps where applicable.
 - Documentation is complete.
 - The platform can be reproduced by other engineers using compatible hardware.
 
@@ -135,6 +136,12 @@ The roadmap is considered complete when:
 
 # Next Milestone
 
-**Sprint 01 — Edge DNS Platform**
+**Sprint 02 — Kubernetes Platform Foundation**
 
-The next major objective is to build the Edge Layer using the Raspberry Pi Cluster, deploying Pi-hole and Unbound as the first production-inspired infrastructure services.
+The next major objective is to build the first upstream Kubernetes platform on Proxmox.
+
+The Sprint will provision the Kubernetes virtual machines using OpenTofu, prepare the Linux nodes using Ansible, configure containerd, install the Kubernetes components and bootstrap the initial cluster using kubeadm.
+
+The initial cluster will consist of one control-plane node and two worker nodes.
+
+High availability, persistent storage, observability, GitOps and application workloads will be addressed in subsequent Sprints.

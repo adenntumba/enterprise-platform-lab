@@ -1,11 +1,11 @@
 # Enterprise Platform Lab
 
-> **Document:** Project Charter  
-> **Version:** 1.0.0  
-> **Status:** Active  
-> **Owner:** Adenn Tumba  
-> **Repository:** enterprise-platform-lab  
-> **Last Updated:** 2026-08-05
+> **Document:** Project Charter
+> **Version:** 1.1.0
+> **Status:** Active
+> **Owner:** Adenn Tumba
+> **Repository:** enterprise-platform-lab
+> **Last Updated:** 2026-10-01
 
 ---
 
@@ -61,22 +61,29 @@ The project objectives are:
 The project includes:
 
 - Raspberry Pi infrastructure
-- Enterprise DNS platform
+- Enterprise Edge DNS platform
 - Linux server baseline
 - Proxmox virtualization
 - Infrastructure provisioning with OpenTofu
 - Configuration management with Ansible
-- Kubernetes platform
+- Upstream Kubernetes platform
+- Kubernetes networking
+- Kubernetes container runtime
+- Kubernetes bootstrap with kubeadm
+- Kubernetes platform services
 - GitOps workflows
 - Continuous Integration
 - Continuous Delivery
 - Internal container registry
 - Object storage
+- Persistent storage
+- Internal PKI
 - Secrets management
 - Monitoring
 - Logging
 - Distributed tracing
 - Local cloud services
+- Platform applications
 - Documentation
 - Automation
 - Architecture Decision Records (ADR)
@@ -128,7 +135,7 @@ Every resource must be reproducible from version-controlled code.
 
 Git is the single source of truth.
 
-Infrastructure changes must originate from Git repositories.
+Infrastructure and platform changes must originate from Git repositories whenever the corresponding platform capability is managed through GitOps.
 
 ---
 
@@ -203,14 +210,18 @@ The project is considered successful when:
 The repository will contain:
 
 - Complete Infrastructure as Code
+- OpenTofu modules and configurations
+- Ansible playbooks and roles
+- Upstream Kubernetes cluster configuration
+- Kubernetes manifests and Helm configurations
 - GitOps configuration
-- Kubernetes manifests
-- Terraform/OpenTofu modules
-- Ansible playbooks
 - GitHub Actions pipelines
 - Architecture Decision Records
 - Operational Runbooks
-- High-quality documentation
+- Observability configuration
+- Security and PKI configuration
+- Platform application configurations
+- High-quality technical documentation
 - Enterprise architecture diagrams
 
 ---
@@ -234,13 +245,13 @@ The project follows the following governance model.
 |---------|-----------|
 | Sprint 00 | Project Foundation |
 | Sprint 01 | Edge DNS Platform |
-| Sprint 02 | Linux Baseline |
-| Sprint 03 | Proxmox Platform |
-| Sprint 04 | Infrastructure as Code |
-| Sprint 05 | Kubernetes Platform |
-| Sprint 06 | GitOps |
-| Sprint 07 | Observability |
-| Sprint 08 | DevSecOps |
+| Sprint 02 | Kubernetes Platform Foundation |
+| Sprint 03 | Kubernetes Platform Services |
+| Sprint 04 | Observability Platform |
+| Sprint 05 | Security & PKI |
+| Sprint 06 | Storage Platform |
+| Sprint 07 | GitOps Platform |
+| Sprint 08 | Platform Applications |
 | Sprint 09 | Hybrid Cloud |
 | Sprint 10 | Chaos Engineering |
 
