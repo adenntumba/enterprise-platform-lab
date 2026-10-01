@@ -20,7 +20,13 @@ This document is the **Single Source of Truth (SSOT)** for the Enterprise Platfo
 
 It provides the roadmap and references every Sprint.
 
-Each Sprint contains its own backlog and is responsible for generating GitHub Milestones, Epics and Issues through the AI prompts.
+Each Sprint contains its own backlog and acts as the source of truth for its GitHub planning artifacts.
+
+The Sprint document defines the scope, objectives, deliverables and acceptance criteria.
+
+The AI prompts are responsible only for transforming the Sprint backlog into GitHub Milestones, Issues and other explicitly defined planning artifacts.
+
+The AI must not invent or expand Sprint scope.
 
 ---
 
@@ -154,15 +160,15 @@ Semantic Versioning
 
 | Sprint | Milestone | Status | Document |
 |---------|-----------|--------|----------|
-| Sprint 00 | Foundation | 🚧 | docs/backlog/Sprint-00-Foundation.md |
-| Sprint 01 | Edge DNS | ⏳ | docs/backlog/Sprint-01-Edge-DNS.md |
-| Sprint 02 | Linux Baseline | ⏳ | docs/backlog/Sprint-02-Linux-Baseline.md |
-| Sprint 03 | Proxmox Platform | ⏳ | docs/backlog/Sprint-03-Proxmox.md |
-| Sprint 04 | Infrastructure as Code | ⏳ | docs/backlog/Sprint-04-IaC.md |
-| Sprint 05 | Kubernetes Platform | ⏳ | docs/backlog/Sprint-05-Kubernetes.md |
-| Sprint 06 | GitOps | ⏳ | docs/backlog/Sprint-06-GitOps.md |
-| Sprint 07 | Observability | ⏳ | docs/backlog/Sprint-07-Observability.md |
-| Sprint 08 | DevSecOps | ⏳ | docs/backlog/Sprint-08-DevSecOps.md |
+| Sprint 00 | Foundation | ✅ | docs/backlog/Sprint-00-Foundation.md |
+| Sprint 01 | Edge DNS Platform | ✅ | docs/backlog/Sprint-01-Edge-DNS.md |
+| Sprint 02 | Kubernetes Platform Foundation | 🚧 | docs/backlog/Sprint-02-Kubernetes-Platform-Foundation.md |
+| Sprint 03 | Kubernetes Platform Services | ⏳ | docs/backlog/Sprint-03-Kubernetes-Platform-Services.md |
+| Sprint 04 | Observability Platform | ⏳ | docs/backlog/Sprint-04-Observability.md |
+| Sprint 05 | Security & PKI | ⏳ | docs/backlog/Sprint-05-Security-PKI.md |
+| Sprint 06 | Storage Platform | ⏳ | docs/backlog/Sprint-06-Storage.md |
+| Sprint 07 | GitOps Platform | ⏳ | docs/backlog/Sprint-07-GitOps.md |
+| Sprint 08 | Platform Applications | ⏳ | docs/backlog/Sprint-08-Applications.md |
 | Sprint 09 | Hybrid Cloud | ⏳ | docs/backlog/Sprint-09-Hybrid-Cloud.md |
 | Sprint 10 | Chaos Engineering | ⏳ | docs/backlog/Sprint-10-Chaos-Engineering.md |
 
