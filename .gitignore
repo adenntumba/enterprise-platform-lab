@@ -1,0 +1,31 @@
+# ============================================
+# OpenTofu / Terraform
+# ============================================
+
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Environment-specific variable files
+terraform.tfvars
+*.auto.tfvars
+*.auto.tfvars.json
+
+# CLI configuration
+.terraformrc
+terraform.rc
+
+# Local override files
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# ============================================
+# Environment
+# ============================================
+
+.env
+!.env.example
