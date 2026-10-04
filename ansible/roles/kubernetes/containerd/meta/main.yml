@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  author: Adenn Tumba
+  description: Container runtime configuration for Kubernetes nodes
+  company: Enterprise Platform Lab
+  license: MIT
+  min_ansible_version: "2.15"
+
+dependencies: []

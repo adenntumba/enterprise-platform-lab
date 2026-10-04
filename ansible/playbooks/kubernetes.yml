@@ -1,0 +1,23 @@
+---
+- name: Prepare Kubernetes nodes
+  hosts: kubernetes
+  become: true
+
+  roles:
+    - role: base/linux
+    - role: kubernetes/common
+    - role: kubernetes/containerd
+
+- name: Configure Kubernetes control plane
+  hosts: control_plane
+  become: true
+
+  roles:
+    - role: kubernetes/control_plane
+
+- name: Configure Kubernetes workers
+  hosts: workers
+  become: true
+
+  roles:
+    - role: kubernetes/worker
