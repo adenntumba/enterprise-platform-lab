@@ -1,0 +1,6 @@
+---
+# Kubernetes node baseline handlers
+
+- name: Apply Kubernetes sysctl configuration
+  ansible.builtin.command:
+    cmd: sysctl --system
