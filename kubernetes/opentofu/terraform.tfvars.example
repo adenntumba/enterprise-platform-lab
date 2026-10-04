@@ -1,0 +1,31 @@
+proxmox_node           = "pve"
+kubernetes_template_id = 9000
+
+kubernetes_vms = {
+  k8s-cp-01 = {
+    pool   = "kubernetes"
+    role   = "control-plane"
+    cores  = 2
+    memory = 4096
+    disk   = 20
+    mac    = "BC:24:11:01:00:01"
+  }
+
+  k8s-worker-01 = {
+    pool   = "kubernetes"
+    role   = "worker"
+    cores  = 2
+    memory = 2048
+    disk   = 20
+    mac    = "BC:24:11:01:00:02"
+  }
+
+  k8s-worker-02 = {
+    pool   = "kubernetes"
+    role   = "worker"
+    cores  = 2
+    memory = 2048
+    disk   = 20
+    mac    = "BC:24:11:01:00:03"
+  }
+}
