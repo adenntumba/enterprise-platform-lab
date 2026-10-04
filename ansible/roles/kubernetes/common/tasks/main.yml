@@ -1,0 +1,64 @@
+---
+# Kubernetes node baseline tasks
+
+- name: Set Kubernetes node hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Install Kubernetes node prerequisite packages
+  ansible.builtin.apt:
+    name: "{{ kubernetes_required_packages }}"
+    state: present
+    update_cache: true
+
+- name: Install time synchronization package
+  ansible.builtin.apt:
+    name: "{{ kubernetes_time_sync_package }}"
+    state: present
+
+- name: Enable and start time synchronization service
+  ansible.builtin.systemd:
+    name: "{{ kubernetes_time_sync_service }}"
+    enabled: true
+    state: started
+
+- name: Load Kubernetes kernel modules
+  community.general.modprobe:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ kubernetes_kernel_modules }}"
+
+- name: Persist Kubernetes kernel modules
+  ansible.builtin.copy:
+    dest: /etc/modules-load.d/kubernetes.conf
+    content: |
+      {% for module in kubernetes_kernel_modules %}
+      {{ module }}
+      {% endfor %}
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure Kubernetes sysctl parameters
+  ansible.builtin.copy:
+    dest: "{{ kubernetes_sysctl_config_file }}"
+    content: |
+      {% for parameter, value in kubernetes_sysctl_settings.items() %}
+      {{ parameter }} = {{ value }}
+      {% endfor %}
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Apply Kubernetes sysctl configuration
+
+- name: Disable active swap
+  ansible.builtin.command:
+    cmd: swapoff -a
+  when: ansible_swaptotal_mb | int > 0
+  changed_when: true
+
+- name: Disable swap in fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^(\s*[^#\s]+\s+\S+\s+swap\s+.*)$'
+    replace: '# \1'
