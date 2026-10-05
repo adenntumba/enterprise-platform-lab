@@ -1,0 +1,16 @@
+---
+# Kubernetes control plane role defaults
+
+kubernetes_cluster_name: kubernetes
+
+kubernetes_kubeconfig_directory: /etc/kubernetes
+
+kubernetes_admin_kubeconfig: /etc/kubernetes/admin.conf
+
+kubernetes_kubelet_service: kubelet
+
+kubernetes_admin_user: debian
+
+kubernetes_admin_home: /home/debian
+
+kubernetes_admin_kubeconfig_user: /home/debian/.kube/config
