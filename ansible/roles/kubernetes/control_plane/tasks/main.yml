@@ -1,0 +1,31 @@
+---
+# Kubernetes control plane bootstrap tasks
+
+- name: Check if Kubernetes control plane is already initialized
+  ansible.builtin.stat:
+    path: "{{ kubernetes_admin_kubeconfig }}"
+  register: kubernetes_control_plane_initialized
+
+- name: Initialize Kubernetes control plane
+  ansible.builtin.command:
+    cmd: >-
+      kubeadm init
+      --cri-socket unix:///run/containerd/containerd.sock
+  when: not kubernetes_control_plane_initialized.stat.exists
+
+- name: Create Kubernetes configuration directory
+  ansible.builtin.file:
+    path: "{{ kubernetes_admin_home }}/.kube"
+    state: directory
+    owner: "{{ kubernetes_admin_user }}"
+    group: "{{ kubernetes_admin_user }}"
+    mode: "0700"
+
+- name: Configure kubectl for Kubernetes administrator
+  ansible.builtin.copy:
+    src: "{{ kubernetes_admin_kubeconfig }}"
+    dest: "{{ kubernetes_admin_kubeconfig_user }}"
+    remote_src: true
+    owner: "{{ kubernetes_admin_user }}"
+    group: "{{ kubernetes_admin_user }}"
+    mode: "0600"
