@@ -1,0 +1,15 @@
+---
+# Kubernetes packages role defaults
+
+kubernetes_version: "1.37"
+
+kubernetes_packages:
+  - kubeadm
+  - kubelet
+  - kubectl
+
+kubernetes_apt_repository: "https://pkgs.k8s.io/core:/stable:/v{{ kubernetes_version }}/deb/"
+
+kubernetes_apt_keyring: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+kubernetes_apt_source: /etc/apt/sources.list.d/kubernetes.list
