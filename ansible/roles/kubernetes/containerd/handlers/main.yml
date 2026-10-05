@@ -1,0 +1,7 @@
+---
+# containerd role handlers
+
+- name: Restart containerd
+  ansible.builtin.systemd:
+    name: "{{ containerd_service }}"
+    state: restarted

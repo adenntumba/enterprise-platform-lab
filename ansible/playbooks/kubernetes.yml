@@ -6,7 +6,7 @@
   roles:
     - role: base/linux
     - role: kubernetes/common
-    # - role: kubernetes/containerd
+    - role: kubernetes/containerd
 
 - name: Configure Kubernetes control plane
   hosts: control_plane
