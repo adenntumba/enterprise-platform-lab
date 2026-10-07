@@ -22,3 +22,10 @@
 
   roles:
     - role: kubernetes/worker
+
+- name: Deploy Kubernetes CNI
+  hosts: control_plane
+  become: true
+
+  roles:
+    - role: kubernetes/cni

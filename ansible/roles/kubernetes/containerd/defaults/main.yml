@@ -8,3 +8,5 @@ containerd_service: containerd
 containerd_config_file: /etc/containerd/config.toml
 
 containerd_systemd_cgroup: true
+
+containerd_cni_bin_dir: /opt/cni/bin

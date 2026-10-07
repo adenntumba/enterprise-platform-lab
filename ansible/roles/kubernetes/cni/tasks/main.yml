@@ -1,0 +1,60 @@
+---
+# Kubernetes CNI deployment tasks
+
+- name: Check if Helm is installed
+  ansible.builtin.command:
+    cmd: helm version --short
+  register: helm_version_installed
+  changed_when: false
+  failed_when: false
+
+- name: Install Helm
+  when: >-
+    helm_version_installed.rc != 0 or
+    (helm_version_installed.stdout | trim).split('+')[0] != 'v' ~ helm_version
+  block:
+    - name: Download Helm installation script
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4
+        dest: /tmp/get_helm.sh
+        mode: "0755"
+
+    - name: Execute Helm installation script
+      ansible.builtin.command:
+        cmd: "/tmp/get_helm.sh --version v{{ helm_version }}"
+      become: true
+      changed_when: true
+
+    - name: Remove Helm installation script
+      ansible.builtin.file:
+        path: /tmp/get_helm.sh
+        state: absent
+
+- name: Verify Helm installation
+  ansible.builtin.command:
+    cmd: helm version --short
+  register: helm_version_final
+  changed_when: false
+
+- name: Assert expected Helm version
+  ansible.builtin.assert:
+    that:
+      - (helm_version_final.stdout | trim).split('+')[0] == 'v' ~ helm_version
+    fail_msg: >-
+      Expected Helm v{{ helm_version }}, but found
+      {{ helm_version_final.stdout | default('unknown') }}.
+
+- name: Install Cilium CNI
+  ansible.builtin.command:
+    cmd: >-
+      helm upgrade --install {{ cilium_release_name }}
+      {{ cilium_chart }}
+      --version {{ cilium_version }}
+      --namespace {{ cilium_namespace }}
+      --kubeconfig {{ cilium_kubeconfig }}
+      --set operator.hostNetwork={{ cilium_operator_host_network | lower }}
+      --wait
+  register: cilium_install
+  changed_when: >-
+    'STATUS: deployed' in cilium_install.stdout
+    or 'STATUS: pending-upgrade' in cilium_install.stdout

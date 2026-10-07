@@ -33,6 +33,13 @@
     replace: '\1{{ containerd_systemd_cgroup | lower }}'
   notify: Restart containerd
 
+- name: Configure containerd CNI binary directory
+  ansible.builtin.replace:
+    path: "{{ containerd_config_file }}"
+    regexp: '^(\s*bin_dir\s*=\s*")[^"]+(")$'
+    replace: '\1{{ containerd_cni_bin_dir }}\2'
+  notify: Restart containerd
+
 - name: Ensure containerd service is enabled and started
   ansible.builtin.systemd:
     name: "{{ containerd_service }}"
