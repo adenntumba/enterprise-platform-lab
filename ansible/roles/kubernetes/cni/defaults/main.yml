@@ -1,0 +1,16 @@
+---
+# Kubernetes CNI role defaults
+
+helm_version: "4.3.0"
+
+cilium_version: "1.20.2"
+
+cilium_namespace: kube-system
+
+cilium_release_name: cilium
+
+cilium_chart: oci://quay.io/cilium/charts/cilium
+
+cilium_kubeconfig: /etc/kubernetes/admin.conf
+
+cilium_operator_host_network: false
