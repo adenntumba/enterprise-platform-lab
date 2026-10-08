@@ -6,34 +6,40 @@ Define the initial compute and storage allocation for Kubernetes virtual machine
 
 ## 2. Initial Sizing
 
+Current sizing, as provisioned by `kubernetes/opentofu` (see `terraform.tfvars.example`):
+
 | Node | vCPU | RAM | Disk |
 |---|---:|---:|---:|
-| `k8s-cp-01` | 4 | 6 GiB | 40 GiB |
-| `k8s-worker-01` | 2 | 4 GiB | 40 GiB |
-| `k8s-worker-02` | 2 | 4 GiB | 40 GiB |
-| **Total** | **8** | **14 GiB** | **120 GiB** |
+| `k8s-cp-01` | 2 | 4 GiB | 20 GiB |
+| `k8s-worker-01` | 2 | 2 GiB | 20 GiB |
+| `k8s-worker-02` | 2 | 2 GiB | 20 GiB |
+| **Total** | **6** | **8 GiB** | **60 GiB** |
+
+The originally planned sizing was 4 vCPU / 6 GiB / 40 GiB for the control plane and 2 vCPU / 4 GiB / 40 GiB per worker (8 vCPU, 14 GiB, 120 GiB in total). It can be applied by changing `kubernetes_vms` in `terraform.tfvars`.
 
 ## 3. Control Plane
 
-Initial allocation:
-
-```text
-4 vCPU
-6 GiB RAM
-40 GiB disk
-```
-
-The additional resources account for control plane components and etcd.
-
-## 4. Workers
-
-Each worker receives:
+Current allocation:
 
 ```text
 2 vCPU
 4 GiB RAM
-40 GiB disk
+20 GiB disk
 ```
+
+The control plane runs the control plane components and stacked etcd.
+
+## 4. Workers
+
+Each worker currently receives:
+
+```text
+2 vCPU
+2 GiB RAM
+20 GiB disk
+```
+
+2 GiB is the kubeadm minimum memory per node; workers have little headroom for workloads.
 
 ## 5. Disk Scope
 

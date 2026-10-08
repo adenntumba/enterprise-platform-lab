@@ -7,8 +7,8 @@ flowchart TB
     Internet((Internet))
 
     Router["Archer C80<br/>192.168.0.1"]
-    PiHole["Pi-hole<br/>192.168.0.111"]
-    Unbound["Unbound<br/>192.168.0.110:5335"]
+    PiHole["Pi-hole (node-01)<br/>192.168.0.111"]
+    Unbound["Unbound (dns-01)<br/>192.168.0.110:5335"]
     Proxmox["Proxmox VE<br/>192.168.0.120"]
 
     CP["k8s-cp-01<br/>192.168.0.130<br/>Control Plane"]
@@ -16,7 +16,7 @@ flowchart TB
     W2["k8s-worker-02<br/>192.168.0.132<br/>Worker"]
 
     CoreDNS["CoreDNS<br/>10.96.0.10"]
-    Cilium["Cilium<br/>Pod Network 10.244.0.0/16"]
+    Cilium["Cilium 1.20.2<br/>cluster-pool IPAM (default 10.0.0.0/8)"]
 
     Internet --> Router
     Router --> PiHole
@@ -57,17 +57,24 @@ flowchart TB
 flowchart LR
     Pod["Kubernetes Pod"]
     CoreDNS["CoreDNS<br/>10.96.0.10"]
+    K8s["cluster.local<br/>Services and Pods"]
+    Resolv["Node /etc/resolv.conf<br/>(from DHCP)"]
     PiHole["Pi-hole<br/>192.168.0.111"]
     Unbound["Unbound<br/>192.168.0.110:5335"]
     Internet((Internet))
 
     Pod --> CoreDNS
-    CoreDNS --> PiHole
+    CoreDNS -- "cluster.local" --> K8s
+    CoreDNS -- "home.arpa" --> PiHole
+    CoreDNS -- "other domains" --> Resolv
+    Resolv -. "when DHCP hands out Pi-hole" .-> PiHole
     PiHole --> Unbound
     Unbound --> Internet
 ```
 
-## 4. Future HA
+## 4. Future HA (planned, not implemented)
+
+The current API endpoint is `https://192.168.0.130:6443`; `k8s-api.home.arpa` is not configured yet.
 
 ```mermaid
 flowchart TB

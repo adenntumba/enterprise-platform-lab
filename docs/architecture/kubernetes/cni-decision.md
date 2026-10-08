@@ -66,15 +66,28 @@ That capability can be evaluated later after the baseline cluster is stable.
 
 ## 6. Pod CIDR
 
-The initial Pod CIDR is:
+The Cilium Helm release does not override its IPAM settings, so Pods use the Cilium cluster-pool IPAM default ((`10.0.0.0/8`, one `/24` per node)).
 
-```text
-10.244.0.0/16
-```
+The originally planned Pod CIDR was `10.244.0.0/16`; it is not configured.
 
-The final Cilium configuration must match the cluster networking model.
+## 7. Implementation
 
-## 7. Alternative: Calico
+Implemented in Sprint 02 by the `kubernetes/cni` Ansible role:
+
+| Setting | Value |
+|---|---|
+| Cilium | `1.20.2` |
+| Chart | `oci://quay.io/cilium/charts/cilium` |
+| Helm | `4.3.0` |
+| Namespace / release | `kube-system` / `cilium` |
+| kube-proxy | kept (no kube-proxy replacement) |
+| Operator `hostNetwork` | `false` |
+| Operator API address | `:9234` |
+| containerd CNI `bin_dir` | `/opt/cni/bin` |
+
+Hubble is enabled by the chart defaults; the `kubernetes/validation` role checks that its state is `Ok`. Hubble Relay and UI are not deployed.
+
+## 8. Alternative: Calico
 
 Calico was considered because it is a mature Kubernetes networking and NetworkPolicy solution.
 
@@ -82,7 +95,7 @@ It remains a valid future comparison target.
 
 Cilium was selected because eBPF and Linux networking are explicit learning objectives of this laboratory.
 
-## 8. Trade-offs
+## 9. Trade-offs
 
 ### Cilium
 
@@ -112,12 +125,12 @@ Trade-offs:
 
 - does not provide the same eBPF-centered learning path selected for this lab.
 
-## 9. Future Evaluation
+## 10. Future Evaluation
 
-The following may be evaluated after the baseline cluster is operational:
+The following may be evaluated now that the baseline cluster is operational:
 
 - kube-proxy replacement;
-- Hubble;
+- Hubble Relay and UI;
 - Gateway API;
 - advanced NetworkPolicy;
 - network observability.

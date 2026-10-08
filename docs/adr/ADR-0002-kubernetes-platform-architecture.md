@@ -182,3 +182,23 @@ GitOps
 Storage
 Security
 ```
+
+## Implementation Notes
+
+> Added 2026-10-08 after Sprint 02. The decisions above are unchanged; this section records where the implementation differs from them. Each difference should be resolved either by changing the code or by a new ADR that supersedes the decision.
+
+| Decision | Implemented as | Where |
+|---|---|---|
+| Upstream Kubernetes | Kubernetes `v1.37.1` from `pkgs.k8s.io`, packages held | `ansible/roles/kubernetes/packages` |
+| containerd with systemd cgroups | Debian package `containerd` `1.7.24`, `SystemdCgroup = true` | `ansible/roles/kubernetes/containerd` |
+| kubeadm bootstrap | `kubeadm init --cri-socket unix:///run/containerd/containerd.sock` (flags only, no kubeadm config file) | `ansible/roles/kubernetes/control_plane` |
+| Cilium with kube-proxy | Cilium `1.20.2` via Helm `4.3.0`, kube-proxy kept | `ansible/roles/kubernetes/cni` |
+| Pod network `10.244.0.0/16` | **Not applied.** No `--pod-network-cidr` is passed to kubeadm and Cilium uses its default cluster-pool IPAM | `control_plane`, `cni` |
+| Service network `10.96.0.0/16` | **Differs.** kubeadm default `10.96.0.0/12`; DNS Service IP `10.96.0.10` | `control_plane` |
+| API endpoint `k8s-api.home.arpa` | **Not applied.** No `--control-plane-endpoint`; the API is `https://192.168.0.130:6443` | `control_plane` |
+| CoreDNS → Pi-hole → Unbound | `home.arpa` is forwarded to Pi-hole `192.168.0.111`; other domains use the node `/etc/resolv.conf` | `ansible/roles/kubernetes/dns` |
+
+Note on HA: kubeadm only supports adding control-plane nodes when `controlPlaneEndpoint` was set at `kubeadm init`. The planned HA evolution requires either re-initializing the cluster with the endpoint or a documented migration.
+
+Note on versions: Kubernetes v1.35 was announced as the last release to support containerd 1.x. The cluster runs and validates with containerd `1.7.24` and Kubernetes `v1.37.1`, but the combination should be reviewed.
+

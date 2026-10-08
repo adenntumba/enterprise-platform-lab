@@ -2,7 +2,9 @@
 
 ## 1. Objective
 
-Define how the initial Kubernetes cluster will be bootstrapped.
+Define how the initial Kubernetes cluster is bootstrapped.
+
+Status: implemented in Sprint 02 by the `kubernetes/control_plane` and `kubernetes/worker` Ansible roles.
 
 ## 2. Tools
 
@@ -32,47 +34,41 @@ kubeadm
 
 ## 3. Control Plane Bootstrap
 
-The control plane will be initialized using:
+The control plane is initialized by the `kubernetes/control_plane` role using:
 
 ```text
-kubeadm init
+kubeadm init --cri-socket unix:///run/containerd/containerd.sock
 ```
 
-The preferred implementation is a declarative kubeadm configuration file rather than a long collection of command-line flags.
+The role skips `kubeadm init` when `/etc/kubernetes/admin.conf` already exists, and copies the admin kubeconfig to `/home/debian/.kube/config`.
+
+Planned (not implemented): a declarative kubeadm configuration file instead of command-line flags.
 
 ## 4. Control Plane Endpoint
 
-The cluster will use:
+The cluster currently uses the control-plane IP address:
 
 ```text
-k8s-api.home.arpa
+https://192.168.0.130:6443
 ```
 
-Initially:
+No `--control-plane-endpoint` is passed to `kubeadm init`.
 
-```text
-k8s-api.home.arpa -> 192.168.0.130
-```
-
-The endpoint is established from the beginning to support future HA evolution.
+Planned (not implemented): `k8s-api.home.arpa -> 192.168.0.130`, set as `controlPlaneEndpoint` to support future HA evolution.
 
 ## 5. Pod Network
 
-The initial Pod CIDR is:
+No Pod CIDR is passed to kubeadm.
 
-```text
-10.244.0.0/16
-```
+Pod addresses are allocated by Cilium using its default cluster-pool IPAM ((`10.0.0.0/8`, one `/24` per node)).
 
-The selected CNI must be configured consistently with this network.
+The originally planned Pod CIDR was `10.244.0.0/16`.
 
 ## 6. Worker Bootstrap
 
-Workers will join the cluster using:
+Workers join the cluster using `kubeadm join`.
 
-```text
-kubeadm join
-```
+The `kubernetes/worker` role generates a fresh join command on the control plane with `kubeadm token create --print-join-command` (delegated, `run_once`, `no_log`) and runs it on every worker that does not yet have `/etc/kubernetes/kubelet.conf`.
 
 The initial workers are:
 
@@ -96,13 +92,15 @@ The final implementation must encode repeatable configuration in Ansible and dec
 ## 9. Execution Order
 
 ```text
-1. Provision VMs
-2. Configure Linux
-3. Install containerd
-4. Install Kubernetes components
-5. Bootstrap control plane
-6. Install CNI
-7. Join workers
-8. Validate DNS
-9. Validate cluster
+1. Provision VMs                  kubernetes/opentofu
+2. Configure Linux                base/linux, kubernetes/common
+3. Install containerd             kubernetes/containerd
+4. Install Kubernetes components  kubernetes/packages
+5. Bootstrap control plane        kubernetes/control_plane
+6. Join workers                   kubernetes/worker
+7. Install CNI                    kubernetes/cni
+8. Configure DNS                  kubernetes/dns
+9. Validate cluster and DNS       kubernetes/validation (separate playbook)
 ```
+
+Workers join before the CNI is installed; all nodes stay `NotReady` until Cilium is running.

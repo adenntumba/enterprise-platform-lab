@@ -49,17 +49,13 @@ The Kubernetes API is exposed through:
 TCP 6443
 ```
 
-The logical endpoint is:
+The current endpoint is:
 
 ```text
-k8s-api.home.arpa
+https://192.168.0.130:6443
 ```
 
-Initially:
-
-```text
-k8s-api.home.arpa -> 192.168.0.130
-```
+Planned (not implemented): the logical endpoint `k8s-api.home.arpa -> 192.168.0.130`.
 
 ## 6. Availability
 

@@ -52,13 +52,17 @@ OpenTofu
   -> VM lifecycle
 
 Ansible
-  -> Operating system configuration
-  -> containerd
-  -> Kubernetes packages
-  -> Node preparation
+  -> Operating system configuration    (base/linux, kubernetes/common)
+  -> containerd                        (kubernetes/containerd)
+  -> Kubernetes packages               (kubernetes/packages)
+  -> Cluster bootstrap with kubeadm    (kubernetes/control_plane)
+  -> Worker joining with kubeadm       (kubernetes/worker)
+  -> CNI with Helm                     (kubernetes/cni)
+  -> CoreDNS configuration             (kubernetes/dns)
+  -> Validation                        (kubernetes/validation)
 
 kubeadm
-  -> Cluster bootstrap and node joining
+  -> Executed by Ansible for cluster bootstrap and node joining
 ```
 
 Permanent manual configuration should be avoided.
