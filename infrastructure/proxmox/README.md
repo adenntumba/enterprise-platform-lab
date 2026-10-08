@@ -76,9 +76,9 @@ on the lab.
 Currently, this layer manages:
 
 - Proxmox provider configuration
-- Proxmox VM pools
-- network-related infrastructure definitions
-- storage-related infrastructure definitions
+- Proxmox VM pools (only `kubernetes-pool`, defined in `terraform.tfvars`)
+
+`network.tf` and `storage.tf` exist as placeholders and are currently empty. The bridge `vmbr0` and the storages `local`, `local-lvm` and `vmdata` were created manually in Proxmox and are not managed by OpenTofu.
 
 ### Workload-specific resources
 
@@ -132,9 +132,9 @@ The repository follows a layered infrastructure model:
 Responsible for:
 
 - Proxmox pools
-- storage definitions
-- network definitions
 - shared Proxmox infrastructure
+
+Planned (placeholders only): storage and network definitions.
 
 ### `kubernetes/opentofu`
 
@@ -214,8 +214,8 @@ to manage.
 Current pools include:
 
 ```text
-kubernetes-pool
-truenas-pool
+kubernetes-pool   managed by this OpenTofu configuration
+truenas-pool      exists in Proxmox, not managed by OpenTofu
 ```
 
 For example:
@@ -326,9 +326,9 @@ Defines configurable infrastructure parameters.
 
 ### `terraform.tfvars`
 
-Contains environment-specific values.
+Contains environment-specific values. It currently defines only `vm_pools`.
 
-Sensitive credentials must never be committed to the repository.
+This file is tracked in Git because it contains no secrets, even though `.gitignore` ignores `terraform.tfvars` files. Sensitive credentials must never be committed to the repository.
 
 ### `pools.tf`
 
@@ -336,11 +336,11 @@ Defines Proxmox VM pools.
 
 ### `network.tf`
 
-Defines network-related infrastructure configuration.
+Placeholder for network-related infrastructure configuration. Currently empty.
 
 ### `storage.tf`
 
-Defines storage-related infrastructure configuration.
+Placeholder for storage-related infrastructure configuration. Currently empty.
 
 ---
 
@@ -545,6 +545,7 @@ The architecture intentionally separates resource ownership.
              |             |             |
              v             v             v
            Network       Storage        Pools
+         (planned)     (planned)    (managed)
              |             |             |
              +-------------+-------------+
                            |
@@ -823,9 +824,9 @@ Proxmox VE
 |
 +-- Pools
      |
-     +-- kubernetes-pool
+     +-- kubernetes-pool   (OpenTofu)
      |
-     +-- truenas-pool
+     +-- truenas-pool      (manual)
 ```
 
 The Kubernetes workload currently consumes:
@@ -848,11 +849,11 @@ Validated components include:
 
 - Proxmox provider authentication
 - Proxmox connectivity
-- VM pools
-- network configuration
-- storage configuration
+- VM pools (`kubernetes-pool`)
 - Kubernetes pool availability
 - consumption of the Kubernetes pool by the Kubernetes OpenTofu layer
+
+Network (`vmbr0`) and storage (`vmdata`) are used by the Kubernetes VMs but are not yet managed by this configuration.
 
 The Kubernetes VM provisioning is implemented separately under:
 
