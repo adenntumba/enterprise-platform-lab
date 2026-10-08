@@ -44,7 +44,59 @@
       Expected Helm v{{ helm_version }}, but found
       {{ helm_version_final.stdout | default('unknown') }}.
 
-- name: Install Cilium CNI
+- name: Check if Cilium Helm release exists
+  ansible.builtin.command:
+    cmd: >-
+      helm list
+      --namespace {{ cilium_namespace }}
+      --kubeconfig {{ cilium_kubeconfig }}
+      --filter '^{{ cilium_release_name }}$'
+      --output json
+  register: cilium_release_status
+  changed_when: false
+  failed_when: false
+
+- name: Read Cilium Helm release values
+  ansible.builtin.command:
+    cmd: >-
+      helm get values {{ cilium_release_name }}
+      --namespace {{ cilium_namespace }}
+      --kubeconfig {{ cilium_kubeconfig }}
+      --output json
+  register: cilium_release_values
+  changed_when: false
+  failed_when: false
+  when: >-
+    cilium_release_status.rc == 0 and
+    (cilium_release_status.stdout | from_json | length) > 0
+
+- name: Determine Cilium release state
+  ansible.builtin.set_fact:
+    cilium_release_exists: >-
+      {{
+        cilium_release_status.rc == 0 and
+        (cilium_release_status.stdout | from_json | length) > 0
+      }}
+    cilium_current_values: >-
+      {{
+        cilium_release_values.stdout | from_json
+        if (
+          cilium_release_status.rc == 0 and
+          (cilium_release_status.stdout | from_json | length) > 0
+        )
+        else {}
+      }}
+    cilium_current_chart: >-
+      {{
+        (cilium_release_status.stdout | from_json)[0].chart
+        if (
+          cilium_release_status.rc == 0 and
+          (cilium_release_status.stdout | from_json | length) > 0
+        )
+        else ''
+      }}
+
+- name: Install or upgrade Cilium CNI
   ansible.builtin.command:
     cmd: >-
       helm upgrade --install {{ cilium_release_name }}
@@ -53,8 +105,14 @@
       --namespace {{ cilium_namespace }}
       --kubeconfig {{ cilium_kubeconfig }}
       --set operator.hostNetwork={{ cilium_operator_host_network | lower }}
+      --set-string operator.extraArgs[0]=--operator-api-serve-addr={{ cilium_operator_api_serve_addr }}
       --wait
+  when: >-
+    not cilium_release_exists
+    or cilium_current_chart != 'cilium-' ~ cilium_version
+    or cilium_current_values.get('operator', {}).get('hostNetwork', true)
+       != cilium_operator_host_network
+    or cilium_current_values.get('operator', {}).get('extraArgs', [])
+       != ['--operator-api-serve-addr=' ~ cilium_operator_api_serve_addr]
   register: cilium_install
-  changed_when: >-
-    'STATUS: deployed' in cilium_install.stdout
-    or 'STATUS: pending-upgrade' in cilium_install.stdout
+  changed_when: true

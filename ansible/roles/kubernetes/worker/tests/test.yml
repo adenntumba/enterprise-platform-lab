@@ -1,0 +1,7 @@
+---
+- name: Test Kubernetes worker role
+  hosts: workers
+  become: true
+
+  roles:
+    - role: kubernetes/worker
