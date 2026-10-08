@@ -1,0 +1,9 @@
+---
+galaxy_info:
+  role_name: validation
+  author: Adenn Tumba
+  description: Validate Kubernetes cluster health, networking and DNS
+  license: MIT
+  min_ansible_version: "2.15"
+
+dependencies: []

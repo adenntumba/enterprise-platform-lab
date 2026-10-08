@@ -1,0 +1,202 @@
+---
+# Kubernetes cluster validation tasks
+
+- name: Check kubelet service
+  ansible.builtin.systemd:
+    name: "{{ kubernetes_validation_kubelet_service }}"
+  register: kubernetes_validation_kubelet
+  changed_when: false
+
+- name: Assert kubelet service is active
+  ansible.builtin.assert:
+    that:
+      - kubernetes_validation_kubelet.status.ActiveState == "active"
+    fail_msg: >-
+      kubelet service is not active on {{ inventory_hostname }}
+    success_msg: >-
+      kubelet service is active on {{ inventory_hostname }}
+
+- name: Check containerd service
+  ansible.builtin.systemd:
+    name: "{{ kubernetes_validation_containerd_service }}"
+  register: kubernetes_validation_containerd
+  changed_when: false
+
+- name: Assert containerd service is active
+  ansible.builtin.assert:
+    that:
+      - kubernetes_validation_containerd.status.ActiveState == "active"
+    fail_msg: >-
+      containerd service is not active on {{ inventory_hostname }}
+    success_msg: >-
+      containerd service is active on {{ inventory_hostname }}
+
+- name: Check Kubernetes nodes
+  ansible.builtin.command:
+    cmd: >-
+      kubectl get nodes
+      --kubeconfig {{ kubernetes_validation_kubeconfig }}
+      -o json
+  register: kubernetes_validation_nodes
+  changed_when: false
+  when: inventory_hostname == kubernetes_validation_control_plane_host
+
+- name: Validate Kubernetes nodes are Ready
+  ansible.builtin.assert:
+    that:
+      - item.status.conditions
+        | selectattr('type', 'equalto', 'Ready')
+        | selectattr('status', 'equalto', 'True')
+        | list
+        | length == 1
+    fail_msg: >-
+      Kubernetes node {{ item.metadata.name }} is not Ready
+    success_msg: >-
+      Kubernetes node {{ item.metadata.name }} is Ready
+  loop: "{{ (kubernetes_validation_nodes.stdout | from_json)['items'] }}"
+  when: inventory_hostname == kubernetes_validation_control_plane_host
+
+- name: Check Cilium status
+  ansible.builtin.command:
+    cmd: >-
+      kubectl
+      --kubeconfig {{ kubernetes_validation_kubeconfig }}
+      -n {{ kubernetes_validation_cilium_namespace }}
+      exec ds/{{ kubernetes_validation_cilium_daemonset }}
+      --
+      cilium status
+      -o json
+  register: kubernetes_validation_cilium
+  changed_when: false
+  when: inventory_hostname == kubernetes_validation_control_plane_host
+
+- name: Validate Cilium status
+  ansible.builtin.assert:
+    that:
+      - (kubernetes_validation_cilium.stdout | from_json)['cilium']['state'] == "Ok"
+      - (kubernetes_validation_cilium.stdout | from_json)['kubernetes']['state'] == "Ok"
+      - (kubernetes_validation_cilium.stdout | from_json)['cluster']['ciliumHealth']['state'] == "Ok"
+      - (kubernetes_validation_cilium.stdout | from_json)['cni-file']['state'] == "Ok"
+      - (kubernetes_validation_cilium.stdout | from_json)['hubble']['state'] == "Ok"
+    fail_msg: >-
+      Cilium validation failed on {{ kubernetes_validation_control_plane_host }}
+    success_msg: >-
+      Cilium is healthy on {{ kubernetes_validation_control_plane_host }}
+  when: inventory_hostname == kubernetes_validation_control_plane_host
+
+- name: Validate DNS functionality
+  when: inventory_hostname == kubernetes_validation_control_plane_host
+  block:
+
+    - name: Remove previous DNS validation pod
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          delete pod {{ kubernetes_validation_test_pod }}
+          --ignore-not-found=true
+      register: kubernetes_validation_dns_cleanup
+      changed_when: >-
+        'deleted' in kubernetes_validation_dns_cleanup.stdout
+
+    - name: Create DNS validation pod
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          run {{ kubernetes_validation_test_pod }}
+          --image={{ kubernetes_validation_test_image }}
+          --restart=Never
+          --command
+          --
+          sleep 300
+      register: kubernetes_validation_dns_pod
+      changed_when: true
+
+    - name: Wait for DNS validation pod
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          wait
+          --for=condition=Ready
+          pod/{{ kubernetes_validation_test_pod }}
+          --timeout=60s
+      changed_when: false
+
+    - name: Validate Kubernetes internal DNS
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          exec {{ kubernetes_validation_test_pod }}
+          --
+          nslookup kubernetes.default.svc.cluster.local
+      register: kubernetes_validation_internal_dns
+      changed_when: false
+
+    - name: Assert Kubernetes internal DNS
+      ansible.builtin.assert:
+        that:
+          - kubernetes_validation_dns_service_ip in kubernetes_validation_internal_dns.stdout
+        fail_msg: >-
+          Kubernetes internal DNS validation failed.
+          Expected {{ kubernetes_validation_dns_service_ip }}
+        success_msg: >-
+          Kubernetes internal DNS is working.
+
+    - name: Validate edge DNS
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          exec {{ kubernetes_validation_test_pod }}
+          --
+          nslookup k8s-cp-01.home.arpa
+      register: kubernetes_validation_edge_dns
+      changed_when: false
+
+    - name: Assert edge DNS
+      ansible.builtin.assert:
+        that:
+          - kubernetes_validation_edge_dns.stdout is search("192.168.0.130")
+        fail_msg: >-
+          Edge DNS validation failed.
+          Expected k8s-cp-01.home.arpa to resolve to 192.168.0.130
+        success_msg: >-
+          Edge DNS is working.
+
+    - name: Validate external DNS
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          exec {{ kubernetes_validation_test_pod }}
+          --
+          nslookup google.com
+      register: kubernetes_validation_external_dns
+      changed_when: false
+
+    - name: Assert external DNS
+      ansible.builtin.assert:
+        that:
+          - kubernetes_validation_external_dns.rc == 0
+          - kubernetes_validation_external_dns.stdout is search("Address")
+        fail_msg: >-
+          External DNS validation failed.
+          google.com could not be resolved.
+        success_msg: >-
+          External DNS is working.
+
+  always:
+
+    - name: Remove DNS validation pod
+      ansible.builtin.command:
+        cmd: >-
+          kubectl
+          --kubeconfig {{ kubernetes_validation_kubeconfig }}
+          delete pod {{ kubernetes_validation_test_pod }}
+          --ignore-not-found=true
+      register: kubernetes_validation_dns_final_cleanup
+      changed_when: >-
+        'deleted' in kubernetes_validation_dns_final_cleanup.stdout
