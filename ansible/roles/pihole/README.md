@@ -1,31 +1,32 @@
 # Pi-hole
 
-Ansible Role responsável pela instalação, configuração e validação do **Pi-hole** como camada de DNS da Edge DNS Platform do Enterprise Platform Lab.
+Ansible role responsible for installing, configuring and validating **Pi-hole** as the DNS layer of the Edge DNS Platform of the Enterprise Platform Lab.
 
 ---
 
-## Objetivo
+## Objective
 
-Implantar o Pi-hole de forma automatizada, reproduzível e idempotente utilizando Ansible.
+Deploy Pi-hole in an automated and reproducible way using Ansible.
 
-O Pi-hole será responsável por:
+Pi-hole is responsible for:
 
-- receber consultas DNS dos clientes da LAN;
-- realizar filtragem de DNS;
-- encaminhar consultas para o Unbound;
-- atuar como ponto central de DNS da rede local;
-- disponibilizar a interface web para administração;
-- fornecer observabilidade básica das consultas DNS.
+- receiving DNS queries from LAN clients;
+- DNS filtering;
+- forwarding queries to Unbound;
+- acting as the central DNS server of the local network;
+- providing the web interface for administration;
+- providing basic observability of DNS queries;
+- serving the `home.arpa` local DNS records used by the lab (records are created manually today, see [Local DNS records](#local-dns-records)).
 
-O Pi-hole **não será responsável pelo DHCP**.
+Pi-hole is **not** responsible for DHCP.
 
-O DHCP continuará sendo fornecido pelo Archer C80.
+DHCP is provided by the TP-Link Archer C80 router.
 
 ---
 
-## Contexto
+## Context
 
-O Edge DNS Platform utiliza uma arquitetura em duas camadas:
+The Edge DNS Platform uses a two-layer architecture:
 
 ```text
                     LAN
@@ -35,6 +36,7 @@ O Edge DNS Platform utiliza uma arquitetura em duas camadas:
           +-----------------------+
           |       Pi-hole         |
           |                       |
+          | node-01               |
           | 192.168.0.111         |
           | DNS :53               |
           +-----------+-----------+
@@ -44,6 +46,7 @@ O Edge DNS Platform utiliza uma arquitetura em duas camadas:
           +-----------------------+
           |       Unbound         |
           |                       |
+          | dns-01                |
           | 192.168.0.110         |
           | DNS :5335             |
           +-----------+-----------+
@@ -53,17 +56,17 @@ O Edge DNS Platform utiliza uma arquitetura em duas camadas:
                    Internet
 ```
 
-O objetivo é separar claramente as responsabilidades:
+Responsibilities are clearly separated:
 
-| Componente | Responsabilidade |
+| Component | Responsibility |
 |---|---|
-| Archer C80 | Gateway, NAT e DHCP |
-| Pi-hole | DNS filtering e DNS forwarding |
-| Unbound | DNS recursivo e validação DNSSEC |
+| Archer C80 | Gateway, NAT and DHCP |
+| Pi-hole | DNS filtering and DNS forwarding |
+| Unbound | Recursive DNS and DNSSEC validation |
 
 ---
 
-## Arquitetura de rede
+## Network Architecture
 
 ### Archer C80
 
@@ -71,25 +74,26 @@ O objetivo é separar claramente as responsabilidades:
 IP: 192.168.0.1
 ```
 
-Responsabilidades:
+Responsibilities:
 
-- gateway da LAN;
+- LAN gateway;
 - NAT;
 - DHCP;
 - DHCP reservations.
 
-O Raspberry que hospeda o Pi-hole utiliza DHCP.
+The Raspberry Pi that hosts Pi-hole uses DHCP.
 
-O endereço é mantido estável através de uma DHCP reservation configurada no roteador.
+Its address is kept stable through a DHCP reservation on the router.
 
 ### Pi-hole
 
 ```text
-Hostname:  cluster-02
-IP:        192.168.0.111
-Interface: eth0
-DNS:       53/TCP
-DNS:       53/UDP
+Inventory host: node-01 (group: pihole)
+Hostname:       cluster-02
+IP:             192.168.0.111
+Interface:      eth0
+DNS:            53/TCP
+DNS:            53/UDP
 ```
 
 DHCP reservation:
@@ -99,20 +103,21 @@ MAC: b8:27:eb:08:bf:4a
 IP:  192.168.0.111
 ```
 
-A configuração de IP não é gerenciada por esta role.
+The IP configuration is not managed by this role.
 
-O NetworkManager continua responsável pela configuração de rede do Raspberry.
+NetworkManager remains responsible for the network configuration of the Raspberry Pi.
 
 ### Unbound
 
 ```text
-Hostname:  cluster-01
-IP:        192.168.0.110
-DNS:       5335/TCP
-DNS:       5335/UDP
+Inventory host: dns-01 (group: unbound)
+Hostname:       cluster-01
+IP:             192.168.0.110
+DNS:            5335/TCP
+DNS:            5335/UDP
 ```
 
-O Pi-hole utiliza o Unbound como seu único upstream DNS:
+Pi-hole uses Unbound as its only upstream DNS server:
 
 ```text
 192.168.0.110#5335
@@ -120,9 +125,9 @@ O Pi-hole utiliza o Unbound como seu único upstream DNS:
 
 ---
 
-## Fluxo DNS
+## DNS Flow
 
-O fluxo esperado é:
+The expected flow is:
 
 ```text
 Client
@@ -148,11 +153,11 @@ TLD Servers
 Authoritative DNS Servers
 ```
 
-O cliente não acessa diretamente o Unbound.
+Clients do not query Unbound directly.
 
-O Unbound também não deve ser utilizado diretamente pelos clientes da LAN.
+Unbound must not be used directly by LAN clients.
 
-Isso cria uma separação clara entre:
+This creates a clear separation between:
 
 ```text
 DNS Filtering
@@ -167,57 +172,46 @@ DNS Recursion
    Unbound
 ```
 
----
-
-## Responsabilidades da Role
-
-A role `pihole` é responsável por:
-
-- validar o sistema operacional;
-- validar a arquitetura;
-- validar a interface de rede;
-- validar o endereço IP esperado;
-- validar a disponibilidade da porta 53;
-- instalar dependências;
-- baixar o instalador oficial do Pi-hole;
-- instalar o Pi-hole;
-- configurar o upstream DNS;
-- configurar o modo de escuta DNS;
-- configurar a interface DNS;
-- configurar a porta DNS;
-- configurar query logging;
-- configurar DNSSEC;
-- habilitar o serviço `pihole-FTL`;
-- iniciar o serviço;
-- validar a configuração;
-- validar a porta DNS;
-- validar o estado do serviço.
+Kubernetes CoreDNS forwards the `home.arpa` zone to Pi-hole (see `ansible/roles/kubernetes/dns`).
 
 ---
 
-## Pré-requisitos
+## Role Responsibilities
 
-O host deve atender aos seguintes requisitos.
+The `pihole` role:
 
-### Sistema operacional
+- validates the operating system (Debian 13 or later);
+- validates the architecture (`aarch64`);
+- validates that the network interface exists;
+- validates that the expected IP address is present on the host;
+- validates that at least one upstream DNS server is configured;
+- installs dependencies;
+- checks whether Pi-hole is already installed (`/usr/local/bin/pihole`);
+- on a fresh install only: checks that port 53 is free, clones the official Pi-hole repository, renders a bootstrap `pihole.toml` and runs the unattended installer;
+- verifies the `pihole` and `pihole-FTL` binaries;
+- configures upstream DNS, listening mode, interface, port, query logging and DNSSEC through `pihole-FTL --config`;
+- enables and starts the `pihole-FTL` service;
+- validates the configuration, the DNS listener on port 53 and the service state.
+
+---
+
+## Prerequisites
+
+### Operating system
 
 ```text
 Debian GNU/Linux 13 (trixie)
 ```
 
-A role atualmente valida Debian 13 ou superior.
+The role validates Debian 13 or later (Raspberry Pi OS reports `Debian`).
 
-### Arquitetura
+### Architecture
 
 ```text
 aarch64
 ```
 
-ou:
-
-```text
-arm64
-```
+Only `aarch64` is accepted by the validation task.
 
 ### Interface
 
@@ -225,17 +219,17 @@ arm64
 eth0
 ```
 
-### Endereço IP
+### IP address
 
 ```text
 192.168.0.111
 ```
 
-Esse endereço deve estar presente no host antes da execução da role.
+This address must be present on the host before the role runs.
 
-### DHCP Reservation
+### DHCP reservation
 
-O roteador deve manter:
+The router must keep:
 
 ```text
 MAC: b8:27:eb:08:bf:4a
@@ -244,7 +238,7 @@ IP:  192.168.0.111
 
 ### Unbound
 
-O Unbound deve estar disponível em:
+Unbound must be available at:
 
 ```text
 192.168.0.110:5335
@@ -252,7 +246,7 @@ O Unbound deve estar disponível em:
 
 ---
 
-## Estrutura da Role
+## Role Structure
 
 ```text
 roles/
@@ -261,14 +255,21 @@ roles/
     │   └── main.yml
     ├── handlers/
     │   └── main.yml
+    ├── meta/
+    │   └── main.yml
     ├── tasks/
+    │   └── main.yml
+    ├── templates/
+    │   └── pihole.toml.j2
+    ├── tests/
+    ├── vars/
     │   └── main.yml
     └── README.md
 ```
 
 ---
 
-## Variáveis principais
+## Main Variables
 
 ### Interface
 
@@ -276,21 +277,19 @@ roles/
 pihole_interface: "eth0"
 ```
 
-Interface utilizada pelo Pi-hole.
+Interface used by Pi-hole. It is also used for `dns.interface` (`pihole_dns_interface`).
 
 ---
 
-### Endereço IPv4
+### IPv4 address
 
 ```yaml
 pihole_ipv4_address: "192.168.0.111"
 ```
 
-Endereço esperado do host.
+Expected address of the host.
 
-A role não configura esse endereço.
-
-Ele é fornecido pelo DHCP do Archer C80 através de uma DHCP reservation.
+The role does not configure this address. It is provided by the Archer C80 DHCP server through a DHCP reservation.
 
 ---
 
@@ -301,18 +300,16 @@ pihole_upstream_dns:
   - "192.168.0.110#5335"
 ```
 
-O Pi-hole encaminha as consultas DNS para o Unbound.
+Pi-hole forwards DNS queries to Unbound.
 
-Não são utilizados DNS públicos como upstream nesta arquitetura.
-
-Exemplos que não fazem parte da configuração atual:
+Public DNS servers are not used as upstream in this architecture, for example:
 
 ```text
 1.1.1.1
 8.8.8.8
 ```
 
-Essa decisão garante que o fluxo DNS permaneça:
+This keeps the DNS flow as:
 
 ```text
 Client
@@ -329,31 +326,39 @@ Internet
 
 ---
 
-## DNS Listening Mode
+### Variables declared but not used
 
-A configuração utilizada é:
+The following defaults are declared but are not used by any task or template:
+
+| Variable | Default |
+|---|---|
+| `pihole_ipv4_cidr` | `192.168.0.111/24` |
+| `pihole_ipv4_network` | `192.168.0.0/24` |
+| `pihole_gateway` | `192.168.0.1` |
+| `pihole_ipv6_enabled` | `false` |
+| `pihole_dhcp_enabled` | `false` |
+
+---
+
+## DNS Listening Mode
 
 ```yaml
 pihole_dns_listening_mode: "LOCAL"
 ```
 
-O modo `LOCAL` permite atender consultas originadas da rede local.
+`LOCAL` mode answers queries from the local network.
 
-O modo `ALL` não é utilizado.
+`ALL` mode is not used.
 
-Isso evita transformar o Pi-hole em um DNS resolver aberto para origens externas.
+This prevents Pi-hole from becoming an open resolver for external sources.
 
 ---
 
 ## DHCP
 
-O DHCP do Pi-hole permanece desabilitado:
+The Pi-hole DHCP server is not enabled. The role does not configure DHCP (`pihole_dhcp_enabled` is not applied), so Pi-hole keeps its default, which is disabled.
 
-```yaml
-pihole_dhcp_enabled: false
-```
-
-A responsabilidade pelo DHCP continua no Archer C80.
+DHCP remains the responsibility of the Archer C80:
 
 ```text
 Archer C80
@@ -365,7 +370,7 @@ Archer C80
     +--- Gateway
 ```
 
-Enquanto:
+While:
 
 ```text
 Pi-hole
@@ -379,36 +384,30 @@ Pi-hole
 
 ## IPv6
 
-A primeira implementação da Edge DNS Platform utiliza IPv4 como caminho principal.
+The first implementation of the Edge DNS Platform uses IPv4 as the main path.
 
-```yaml
-pihole_ipv6_enabled: false
-```
+The role does not configure any IPv6 setting (`pihole_ipv6_enabled` is not applied). This does not mean IPv6 is disabled on the operating system.
 
-Isso não significa que IPv6 esteja desabilitado no sistema operacional.
+A later implementation may handle:
 
-Significa que a configuração inicial do serviço Pi-hole não depende de IPv6.
-
-Uma implementação posterior poderá tratar:
-
-- IPv6 da LAN;
-- DNS AAAA;
+- LAN IPv6;
+- AAAA records;
 - DHCPv6;
 - Router Advertisements;
-- DNS via IPv6;
-- validação de conectividade IPv6.
+- DNS over IPv6;
+- IPv6 connectivity validation.
 
 ---
 
 ## DNSSEC
 
-DNSSEC permanece habilitado:
+DNSSEC is enabled:
 
 ```yaml
 pihole_dnssec: true
 ```
 
-A validação DNSSEC será realizada pelo caminho:
+DNSSEC validation follows the path:
 
 ```text
 Client
@@ -423,77 +422,73 @@ Unbound
 Authoritative DNS
 ```
 
-O Unbound é responsável pela validação recursiva.
+Unbound is responsible for recursive validation.
 
 ---
 
-## Instalação
+## Installation
 
-A role utiliza o instalador oficial do Pi-hole.
+The role uses the official Pi-hole installer from the Pi-hole Git repository.
 
-O instalador é baixado separadamente:
+On a fresh install (when `/usr/local/bin/pihole` does not exist), the role:
 
-```text
-https://install.pi-hole.net
+1. clones `https://github.com/pi-hole/pi-hole.git` (`pihole_repository_version: master`, `depth: 1`) into `/opt/pihole-installer`;
+2. renders `/etc/pihole/pihole.toml` from `templates/pihole.toml.j2` so that the Pi-hole v6 installer can run unattended;
+3. runs:
+
+```bash
+"/opt/pihole-installer/automated install/basic-install.sh" --unattended
 ```
 
-e executado posteriormente.
-
-A role não utiliza:
+The role does not use:
 
 ```bash
 curl -sSL https://install.pi-hole.net | bash
 ```
 
-O objetivo é separar:
+Download and execution are separated, which improves the auditability of the automation.
 
-```text
-Download
-   |
-   v
-Installer
-   |
-   v
-Execution
-```
+After installation, the configuration is managed with the `pihole-FTL --config` CLI.
 
-Isso melhora a auditabilidade da automação.
+Note: `master` is not a pinned version. A new installation may get a different Pi-hole version.
 
 ---
 
-## Execução
+## Execution
 
-O deployment é realizado através do playbook:
+Deployment is done by the playbook:
 
 ```text
 ansible/playbooks/pihole.yml
 ```
 
-Executar syntax check:
+The playbook applies `base/linux` and then `pihole` to the `pihole` group.
+
+Syntax check:
 
 ```bash
 ansible-playbook playbooks/pihole.yml --syntax-check
 ```
 
-Validar inventário:
+Inventory:
 
 ```bash
 ansible-inventory --host node-01
 ```
 
-Testar conectividade:
+Connectivity:
 
 ```bash
 ansible pihole -m ansible.builtin.ping
 ```
 
-Executar em check mode:
+Check mode (configuration and service tasks are skipped in check mode):
 
 ```bash
 ansible-playbook playbooks/pihole.yml --check
 ```
 
-Executar deployment:
+Deployment:
 
 ```bash
 ansible-playbook playbooks/pihole.yml
@@ -501,27 +496,27 @@ ansible-playbook playbooks/pihole.yml
 
 ---
 
-## Validação
+## Validation
 
-Após a instalação, validar o serviço:
+After installation, validate the service:
 
 ```bash
 sudo systemctl status pihole-FTL --no-pager
 ```
 
-Esperado:
+Expected:
 
 ```text
 Active: active (running)
 ```
 
-Validar se o serviço está habilitado:
+Check that the service is enabled:
 
 ```bash
 sudo systemctl is-enabled pihole-FTL
 ```
 
-Esperado:
+Expected:
 
 ```text
 enabled
@@ -529,13 +524,13 @@ enabled
 
 ---
 
-## Validar porta DNS
+## Validate the DNS port
 
 ```bash
 sudo ss -lntup | grep ':53'
 ```
 
-Esperamos encontrar listeners TCP e UDP na porta:
+TCP and UDP listeners are expected on port:
 
 ```text
 53
@@ -543,19 +538,19 @@ Esperamos encontrar listeners TCP e UDP na porta:
 
 ---
 
-## Validar Pi-hole
+## Validate Pi-hole
 
 ```bash
 sudo pihole -v
 ```
 
-Validar FTL:
+Validate FTL:
 
 ```bash
 sudo pihole-FTL --version
 ```
 
-Validar status:
+Validate status:
 
 ```bash
 sudo pihole status
@@ -563,15 +558,15 @@ sudo pihole status
 
 ---
 
-## Teste DNS local
+## Local DNS test
 
-Executar no próprio Pi-hole:
+Run on the Pi-hole host:
 
 ```bash
 dig @127.0.0.1 example.com
 ```
 
-Esperado:
+Expected:
 
 ```text
 status: NOERROR
@@ -579,15 +574,15 @@ status: NOERROR
 
 ---
 
-## Teste DNS através do IP do Pi-hole
+## DNS test through the Pi-hole IP
 
-A partir de outro host da LAN:
+From another LAN host:
 
 ```bash
 dig @192.168.0.111 example.com
 ```
 
-Esperado:
+Expected:
 
 ```text
 status: NOERROR
@@ -595,31 +590,31 @@ status: NOERROR
 
 ---
 
-## Teste TCP
+## TCP test
 
 ```bash
 dig +tcp @192.168.0.111 example.com
 ```
 
-Esperado:
+Expected:
 
 ```text
 status: NOERROR
 ```
 
-O teste TCP é importante porque DNS pode utilizar TCP além de UDP.
+The TCP test matters because DNS can use TCP in addition to UDP.
 
 ---
 
-## Teste do upstream
+## Upstream test
 
-O Pi-hole deve utilizar:
+Pi-hole must use:
 
 ```text
 192.168.0.110#5335
 ```
 
-O objetivo é confirmar:
+The goal is to confirm:
 
 ```text
 Pi-hole
@@ -629,7 +624,7 @@ Pi-hole
 Unbound
 ```
 
-e não:
+and not:
 
 ```text
 Pi-hole
@@ -641,49 +636,65 @@ Pi-hole
 
 ---
 
-## Teste DNSSEC
-
-Executar:
+## DNSSEC test
 
 ```bash
 dig @192.168.0.111 cloudflare.com +dnssec
 ```
 
-A resposta deve apresentar:
+The response must show:
 
 ```text
 status: NOERROR
 ```
 
-e registros relacionados a DNSSEC quando fornecidos pela resposta.
+and DNSSEC-related records when provided in the response.
 
 ---
 
-## Teste de falha DNSSEC
+## DNSSEC failure test
 
-Para validar a cadeia de validação:
+To validate the validation chain:
 
 ```bash
 dig @192.168.0.111 dnssec-failed.org
 ```
 
-Esse teste deve ser interpretado de acordo com a resposta e o comportamento configurado do resolver.
+The expected result is `SERVFAIL`: invalid DNSSEC responses must not be accepted silently.
 
-O objetivo é confirmar que respostas DNSSEC inválidas não sejam aceitas silenciosamente.
+---
+
+## Local DNS records
+
+The Kubernetes platform relies on these `home.arpa` records in Pi-hole:
+
+```text
+k8s-cp-01.home.arpa      192.168.0.130
+k8s-worker-01.home.arpa  192.168.0.131
+k8s-worker-02.home.arpa  192.168.0.132
+```
+
+They were created manually in the Pi-hole web interface. This role does not manage local DNS records yet, so they are not reproducible from the repository.
+
+Check:
+
+```bash
+dig @192.168.0.111 k8s-cp-01.home.arpa
+```
 
 ---
 
 ## Troubleshooting
 
-### Pi-hole não inicia
+### Pi-hole does not start
 
-Verificar:
+Check:
 
 ```bash
 sudo systemctl status pihole-FTL --no-pager -l
 ```
 
-Verificar logs:
+Logs:
 
 ```bash
 sudo journalctl -u pihole-FTL --no-pager -n 100
@@ -691,39 +702,39 @@ sudo journalctl -u pihole-FTL --no-pager -n 100
 
 ---
 
-### Porta 53 ocupada
+### Port 53 in use
 
-Verificar:
+Check:
 
 ```bash
 sudo ss -lntup | grep ':53'
 ```
 
-Identificar o processo:
+Identify the process:
 
 ```bash
 sudo lsof -i :53
 ```
 
-Antes da instalação, a porta 53 deve estar livre.
+Before installation, port 53 must be free. The role fails on a fresh install if it is not.
 
 ---
 
-### Pi-hole não consegue consultar o Unbound
+### Pi-hole cannot query Unbound
 
-Testar o Unbound diretamente:
+Test Unbound directly:
 
 ```bash
 dig @192.168.0.110 -p 5335 example.com
 ```
 
-Testar TCP:
+Test TCP:
 
 ```bash
 dig +tcp @192.168.0.110 -p 5335 example.com
 ```
 
-Se o Unbound não responder, o problema está na camada:
+If Unbound does not answer, the problem is in the layer:
 
 ```text
 Pi-hole
@@ -731,15 +742,15 @@ Pi-hole
 Unbound
 ```
 
-e não necessariamente no Pi-hole.
+and not necessarily in Pi-hole.
 
 ---
 
-### Unbound retorna REFUSED
+### Unbound returns REFUSED
 
-Verificar o `access-control` configurado no Unbound.
+Check the `access-control` configured in Unbound.
 
-O Unbound deve permitir consultas originadas pelo Pi-hole:
+Unbound must allow queries from Pi-hole:
 
 ```text
 192.168.0.111/32
@@ -747,27 +758,27 @@ O Unbound deve permitir consultas originadas pelo Pi-hole:
 
 ---
 
-### Pi-hole não responde na LAN
+### Pi-hole does not answer on the LAN
 
-Verificar:
+Check:
 
 ```bash
 ip -4 addr show eth0
 ```
 
-Esperado:
+Expected:
 
 ```text
 192.168.0.111/24
 ```
 
-Verificar:
+Check:
 
 ```bash
 sudo ss -lntup | grep ':53'
 ```
 
-Verificar conectividade:
+Check connectivity:
 
 ```bash
 ping 192.168.0.111
@@ -775,23 +786,23 @@ ping 192.168.0.111
 
 ---
 
-### Endereço IP mudou
+### The IP address changed
 
-Verificar:
+Check:
 
 ```bash
 ip -4 addr show eth0
 ```
 
-Se o endereço não for:
+If the address is not:
 
 ```text
 192.168.0.111
 ```
 
-verificar a DHCP reservation no Archer C80.
+check the DHCP reservation on the Archer C80.
 
-A reservation esperada é:
+The expected reservation is:
 
 ```text
 MAC: b8:27:eb:08:bf:4a
@@ -800,20 +811,20 @@ IP:  192.168.0.111
 
 ---
 
-## Segurança
+## Security
 
-O Pi-hole é um componente crítico da rede local.
+Pi-hole is a critical component of the local network.
 
-Por isso:
+Therefore:
 
-- DNS não deve ficar exposto diretamente à Internet;
-- `dns.listeningMode=LOCAL` é utilizado;
-- o DHCP do Pi-hole permanece desabilitado;
-- o upstream é controlado;
-- Unbound é utilizado como resolver recursivo;
-- o roteador continua responsável pelo gateway e NAT.
+- DNS must not be exposed directly to the Internet;
+- `dns.listeningMode=LOCAL` is used;
+- Pi-hole DHCP is not enabled;
+- the upstream is controlled;
+- Unbound is used as the recursive resolver;
+- the router remains responsible for gateway and NAT.
 
-Arquitetura:
+Architecture:
 
 ```text
 Internet
@@ -826,15 +837,15 @@ Pi-hole
 Unbound
 ```
 
-O objetivo é evitar que o Pi-hole se transforme em um open resolver.
+The goal is to prevent Pi-hole from becoming an open resolver.
 
 ---
 
-## Observabilidade futura
+## Future Observability
 
-A role atualmente valida o estado básico do serviço.
+The role currently validates the basic service state.
 
-A integração futura poderá incluir:
+A future integration may include:
 
 ```text
 Pi-hole
@@ -848,24 +859,22 @@ Prometheus
 Grafana
 ```
 
-Possíveis métricas:
+Possible metrics:
 
-- queries totais;
-- queries bloqueadas;
-- queries permitidas;
-- clientes;
-- latência;
-- respostas DNS;
-- erros;
-- disponibilidade.
-
-Essa integração está fora do escopo atual da Issue de deployment.
+- total queries;
+- blocked queries;
+- allowed queries;
+- clients;
+- latency;
+- DNS responses;
+- errors;
+- availability.
 
 ---
 
-## Infraestrutura como Código
+## Infrastructure as Code
 
-A instalação do Pi-hole deve ser reproduzível através de:
+The Pi-hole installation should be reproducible through:
 
 ```text
 Git
@@ -880,25 +889,27 @@ Raspberry Pi
 Pi-hole
 ```
 
-Não devem ser necessárias configurações manuais persistentes no servidor após o deployment.
+No persistent manual configuration should be needed on the server after deployment.
 
-Configurações específicas do ambiente devem permanecer versionadas no repositório.
+Exception today: the `home.arpa` local DNS records are created manually.
+
+Environment-specific settings must stay versioned in the repository.
 
 ---
 
-## Princípios de Engenharia
+## Engineering Principles
 
-Esta role segue os seguintes princípios.
+### Idempotency
 
-### Idempotência
+Running the playbook repeatedly should not produce unnecessary changes.
 
-Executar o playbook repetidamente não deve produzir mudanças desnecessárias.
+Current limitation: the six `pihole-FTL --config` tasks use `changed_when: true`. Every run reports them as `changed` and restarts `pihole-FTL` through the handler, even when nothing changed.
 
-### Reprodutibilidade
+### Reproducibility
 
-Um novo Raspberry compatível deve poder ser configurado através do mesmo playbook.
+A new compatible Raspberry Pi should be configurable with the same playbook.
 
-### Separação de responsabilidades
+### Separation of responsibilities
 
 ```text
 base/linux
@@ -914,44 +925,43 @@ unbound
     +--- Recursive DNS
 ```
 
-### Fail Fast
+### Fail fast
 
-A role valida pré-requisitos antes de executar mudanças críticas.
+The role validates prerequisites before making critical changes.
 
-### Segurança por padrão
+### Secure by default
 
-Configurações potencialmente perigosas, como resolver aberto, não são utilizadas.
+Potentially dangerous settings, such as an open resolver, are not used.
 
 ---
 
-## Fora do escopo
+## Out of Scope
 
-Os seguintes itens não fazem parte desta implementação:
+The following items are not part of this implementation:
 
-- configuração do Archer C80;
-- configuração de DHCP pelo Pi-hole;
-- configuração de IP estático no Raspberry;
-- firewall avançado;
-- HA do Pi-hole;
-- HA do Unbound;
-- IPv6 completo;
+- Archer C80 configuration;
+- Pi-hole DHCP;
+- static IP configuration on the Raspberry Pi;
+- advanced firewall;
+- Pi-hole HA;
+- Unbound HA;
+- full IPv6;
 - DNS over HTTPS;
 - DNS over TLS;
 - reverse DNS;
-- local DNS records;
+- local DNS records (created manually today);
 - custom blocklists;
-- monitoramento Prometheus;
-- dashboards Grafana;
-- alertas;
-- integração com Kubernetes.
+- Prometheus monitoring;
+- Grafana dashboards;
+- alerts.
 
-Esses itens podem ser tratados em Issues futuras.
+These items may be handled in future Issues.
 
 ---
 
-## Dependências
+## Dependencies
 
-Esta role depende conceitualmente de:
+This role conceptually depends on:
 
 ```text
 base/linux
@@ -966,28 +976,22 @@ pihole
 Unbound
 ```
 
-O Unbound deve estar implantado e validado antes da validação final da cadeia DNS.
+Unbound must be deployed and validated before the final validation of the DNS chain.
 
 ---
 
-## Próximos passos
+## Next Steps
 
-Após o deployment:
-
-1. Validar Pi-hole localmente.
-2. Validar Pi-hole a partir do `cluster-01`.
-3. Validar comunicação Pi-hole → Unbound.
-4. Validar DNSSEC.
-5. Validar bloqueio DNS.
-6. Validar disponibilidade.
-7. Integrar o DNS do Pi-hole ao DHCP do Archer C80.
-8. Validar resolução DNS de um cliente real da LAN.
-9. Documentar a Edge DNS Platform.
-10. Integrar observabilidade.
+1. Manage the `home.arpa` local DNS records with Ansible.
+2. Make the `pihole-FTL --config` tasks idempotent (compare the current value before changing it).
+3. Pin `pihole_repository_version` to a release tag.
+4. Validate DNS blocking.
+5. Integrate Pi-hole DNS with the Archer C80 DHCP (if not already done) and validate a real LAN client.
+6. Integrate observability.
 
 ---
 
-## Referências
+## References
 
 - [Pi-hole Documentation](https://docs.pi-hole.net/)
 - [Pi-hole FTL Configuration](https://docs.pi-hole.net/ftldns/configfile/)
@@ -1000,7 +1004,7 @@ Após o deployment:
 ## Status
 
 ```text
-Implementation: In Progress
+Implementation: Completed (Sprint 01)
 Environment:    Home Lab
 Architecture:   Edge DNS Platform
 Service:        Pi-hole

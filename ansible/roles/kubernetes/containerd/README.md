@@ -1,4 +1,3 @@
-```markdown
 # Kubernetes Containerd Role
 
 ## Overview
@@ -34,6 +33,7 @@ The role performs the following operations:
 - Create the containerd configuration directory.
 - Generate the default containerd configuration.
 - Configure containerd to use systemd cgroups.
+- Configure the CNI binary directory (`bin_dir`) used by Cilium.
 - Enable the containerd systemd service.
 - Ensure the containerd service is running.
 - Restart containerd when its configuration changes.
@@ -100,9 +100,23 @@ Current defaults:
 containerd_package: containerd
 containerd_service: containerd
 containerd_config_file: /etc/containerd/config.toml
-containerd_config_version: 2
 containerd_systemd_cgroup: true
+containerd_cni_bin_dir: /opt/cni/bin
 ```
+
+The package is the Debian `containerd` package. On Debian 13 it installs containerd `1.7.24`.
+
+Note: Kubernetes v1.35 was announced as the last release to support containerd 1.x. The cluster runs Kubernetes `v1.37.1` with containerd `1.7.24`; this combination should be reviewed.
+
+### CNI binary directory
+
+The role sets every `bin_dir = "..."` entry in `config.toml` to:
+
+```toml
+bin_dir = "/opt/cni/bin"
+```
+
+Cilium installs its `cilium-cni` binary in `/opt/cni/bin`. Without this setting, containerd cannot find the plugin and Pods stay in `ContainerCreating` with `failed to find plugin cilium-cni`. This change was added together with the `kubernetes/cni` role (PR #44).
 
 ### Configuration file
 
@@ -198,6 +212,7 @@ containerd --version
 systemctl is-enabled containerd
 systemctl is-active containerd
 grep -A6 -B3 "SystemdCgroup" /etc/containerd/config.toml
+grep "bin_dir" /etc/containerd/config.toml
 '
 ```
 
@@ -262,24 +277,17 @@ This role does **not** install or configure:
 - kubectl
 - Kubernetes control plane
 - Kubernetes workers
-- CNI plugins
+- CNI plugins (it only points containerd to the CNI binary directory)
 
-Those components belong to subsequent stages of the Kubernetes platform implementation.
+Those components are handled by the other Kubernetes roles.
 
-## Next Steps
+## Known Limitations
 
-The next stage is to install the Kubernetes node components:
+- If `SystemdCgroup` or `bin_dir` is missing from `config.toml`, the `replace` tasks change nothing and do not fail.
+
+## Position in the Playbook
 
 ```text
-containerd
-    │
-    ▼
-kubelet
-    │
-    ├── kubeadm
-    │
-    └── kubectl
-```
-
-After the node packages are available, the next stage will configure the Kubernetes control plane and workers.
+base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
+    -> kubernetes/control_plane -> kubernetes/worker -> kubernetes/cni -> kubernetes/dns
 ```
