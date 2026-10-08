@@ -1,0 +1,7 @@
+---
+- name: Test Kubernetes DNS role
+  hosts: kubernetes
+  become: true
+
+  roles:
+    - kubernetes/dns

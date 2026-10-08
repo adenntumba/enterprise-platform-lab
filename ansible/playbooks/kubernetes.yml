@@ -29,3 +29,10 @@
 
   roles:
     - role: kubernetes/cni
+
+- name: Configure Kubernetes internal DNS
+  hosts: control_plane
+  become: true
+
+  roles:
+    - role: kubernetes/dns

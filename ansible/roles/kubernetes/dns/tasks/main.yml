@@ -1,0 +1,54 @@
+---
+# Kubernetes DNS configuration tasks
+
+- name: Configure CoreDNS
+  kubernetes.core.k8s:
+    state: present
+    kubeconfig: /etc/kubernetes/admin.conf
+    definition:
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: "{{ kubernetes_dns_configmap }}"
+        namespace: "{{ kubernetes_dns_namespace }}"
+      data:
+        Corefile: |
+          .:53 {
+              errors
+              health {
+                 lameduck 5s
+              }
+              ready
+              kubernetes {{ kubernetes_dns_domain }} in-addr.arpa ip6.arpa {
+                 pods insecure
+                 fallthrough in-addr.arpa ip6.arpa
+                 ttl 30
+              }
+              prometheus :9153
+              forward . /etc/resolv.conf {
+                 max_concurrent 1000
+              }
+              cache 30 {
+                 disable success {{ kubernetes_dns_domain }}
+                 disable denial {{ kubernetes_dns_domain }}
+              }
+              loop
+              reload
+              loadbalance
+          }
+
+          {{ kubernetes_dns_edge_domain }}:53 {
+              errors
+              cache 30
+              forward . {{ kubernetes_dns_edge_server }}
+          }
+
+- name: Wait for CoreDNS rollout
+  ansible.builtin.command:
+    cmd: >-
+      kubectl rollout status deployment/{{ kubernetes_dns_deployment }}
+      --namespace {{ kubernetes_dns_namespace }}
+      --kubeconfig /etc/kubernetes/admin.conf
+      --timeout=120s
+  register: kubernetes_dns_rollout
+  changed_when: false

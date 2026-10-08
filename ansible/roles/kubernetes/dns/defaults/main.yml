@@ -1,0 +1,12 @@
+---
+# Kubernetes DNS role defaults
+
+kubernetes_dns_namespace: kube-system
+kubernetes_dns_configmap: coredns
+kubernetes_dns_deployment: coredns
+kubernetes_dns_service: kube-dns
+kubernetes_dns_domain: cluster.local
+
+# Edge DNS Platform
+kubernetes_dns_edge_domain: home.arpa
+kubernetes_dns_edge_server: 192.168.0.111
