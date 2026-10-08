@@ -1,14 +1,14 @@
 # Enterprise Platform Lab
 
-> Version: 1.0.0
+> Version: 1.1.0
 >
-> Status: Draft
+> Status: Active
 >
 > Owner: Adenn Tumba
 >
 > Repository: enterprise-platform-lab
 >
-> Last Updated: 2026-08-05
+> Last Updated: 2026-10-08
 
 ---
 
@@ -94,8 +94,6 @@ Semantic Versioning
 
 # GitHub Labels
 
-# GitHub Labels
-
 | Label | Description |
 |---------|-------------|
 | documentation | Documentation |
@@ -129,6 +127,7 @@ Semantic Versioning
 | pihole | Pi-hole |
 | unbound | Unbound DNS |
 | docker | Docker |
+| containerd | containerd Container Runtime |
 | helm | Helm Charts |
 | ingress | Ingress Controllers |
 | nginx | NGINX |
@@ -161,16 +160,22 @@ Semantic Versioning
 | Sprint | Milestone | Status | Document |
 |---------|-----------|--------|----------|
 | Sprint 00 | Foundation | ✅ | docs/backlog/Sprint-00-Foundation.md |
-| Sprint 01 | Edge DNS Platform | ✅ | docs/backlog/Sprint-01-Edge-DNS.md |
-| Sprint 02 | Kubernetes Platform Foundation | 🚧 | docs/backlog/Sprint-02-Kubernetes-Platform-Foundation.md |
-| Sprint 03 | Kubernetes Platform Services | ⏳ | docs/backlog/Sprint-03-Kubernetes-Platform-Services.md |
-| Sprint 04 | Observability Platform | ⏳ | docs/backlog/Sprint-04-Observability.md |
-| Sprint 05 | Security & PKI | ⏳ | docs/backlog/Sprint-05-Security-PKI.md |
-| Sprint 06 | Storage Platform | ⏳ | docs/backlog/Sprint-06-Storage.md |
-| Sprint 07 | GitOps Platform | ⏳ | docs/backlog/Sprint-07-GitOps.md |
-| Sprint 08 | Platform Applications | ⏳ | docs/backlog/Sprint-08-Applications.md |
-| Sprint 09 | Hybrid Cloud | ⏳ | docs/backlog/Sprint-09-Hybrid-Cloud.md |
-| Sprint 10 | Chaos Engineering | ⏳ | docs/backlog/Sprint-10-Chaos-Engineering.md |
+| Sprint 01 | Edge DNS Platform | ✅ | docs/backlog/Sprint-01-Edge_DNS_Platform.md |
+| Sprint 02 | Kubernetes Platform Foundation | ✅ | docs/backlog/Sprint-02-Kubernetes-Platform-Foundation.md |
+| Sprint 03 | Kubernetes Platform Services | ⏳ | Not created yet |
+| Sprint 04 | Observability Platform | ⏳ | Not created yet |
+| Sprint 05 | Security & PKI | ⏳ | Not created yet |
+| Sprint 06 | Storage Platform | ⏳ | Not created yet |
+| Sprint 07 | GitOps Platform | ⏳ | Not created yet |
+| Sprint 08 | Platform Applications | ⏳ | Not created yet |
+| Sprint 09 | Hybrid Cloud | ⏳ | Not created yet |
+| Sprint 10 | Chaos Engineering | ⏳ | Not created yet |
+
+## Epics
+
+| Epic | Status | Document |
+|---------|--------|----------|
+| Engineering Quality Platform | ⏳ Accepted, not started | docs/backlog/Epic-Engineering-Quality-Platform.md |
 
 ---
 

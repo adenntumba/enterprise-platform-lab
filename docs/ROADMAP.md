@@ -1,12 +1,12 @@
 # 🗺️ Enterprise Platform Lab Roadmap
 
-> **Version:** 1.1.0
+> **Version:** 1.2.0
 >
 > **Status:** In Progress
 >
 > **Owner:** Adenn Tumba
 >
-> **Last Updated:** 2026-10-01
+> **Last Updated:** 2026-10-08
 
 ---
 
@@ -56,7 +56,7 @@ Chaos Engineering
 |---------|------|-----------|--------|
 | Sprint 00 | Foundation | Establish project standards, documentation and repository structure | ✅ Completed |
 | Sprint 01 | Edge DNS Platform | Build the Edge DNS platform using Pi-hole and Unbound | ✅ Completed |
-| Sprint 02 | Kubernetes Platform Foundation | Provision the Kubernetes infrastructure with OpenTofu and prepare upstream Kubernetes nodes with Ansible | 🚧 In Progress |
+| Sprint 02 | Kubernetes Platform Foundation | Provision the Kubernetes VMs with OpenTofu and build an upstream Kubernetes cluster (kubeadm, containerd, Cilium, CoreDNS) with Ansible | ✅ Completed |
 | Sprint 03 | Kubernetes Platform Services | Establish the core services required by the Kubernetes platform | ⏳ Planned |
 | Sprint 04 | Observability Platform | Implement metrics, logs and distributed tracing | ⏳ Planned |
 | Sprint 05 | Security & PKI | Implement security controls, internal PKI and certificate management | ⏳ Planned |
@@ -136,12 +136,17 @@ The roadmap is considered complete when:
 
 # Next Milestone
 
-**Sprint 02 — Kubernetes Platform Foundation**
+**Sprint 03 — Kubernetes Platform Services**
 
-The next major objective is to build the first upstream Kubernetes platform on Proxmox.
+Sprint 02 delivered the first upstream Kubernetes cluster on Proxmox: one control-plane node and two workers running Kubernetes `v1.37.1`, containerd, Cilium and CoreDNS, provisioned with OpenTofu and configured with Ansible.
 
-The Sprint will provision the Kubernetes virtual machines using OpenTofu, prepare the Linux nodes using Ansible, configure containerd, install the Kubernetes components and bootstrap the initial cluster using kubeadm.
+The next objective is to establish the core services required by the Kubernetes platform. The Sprint 03 document has not been created yet.
 
-The initial cluster will consist of one control-plane node and two worker nodes.
+Open items carried over from Sprint 02:
+
+- Release `v0.3.0` (only `v0.1.0` has been published; `v0.2.0` for Sprint 01 is also pending).
+- Kubernetes runbook and troubleshooting guide in `docs/runbooks/`.
+- Automation of the `home.arpa` DNS records, which are currently created manually in Pi-hole.
+- The [Engineering Quality Platform](backlog/Epic-Engineering-Quality-Platform.md) Epic (CI), accepted in ADR-0001 but not started.
 
 High availability, persistent storage, observability, GitOps and application workloads will be addressed in subsequent Sprints.

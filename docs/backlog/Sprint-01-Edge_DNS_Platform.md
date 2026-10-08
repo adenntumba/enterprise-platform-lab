@@ -2,7 +2,7 @@
 
 > **Sprint:** 01
 >
-> **Status:** Planned
+> **Status:** ✅ Completed
 >
 > **Milestone:** Sprint 01 - Edge DNS Platform
 >
@@ -37,9 +37,9 @@ No manual configuration should be required after the initial operating system in
                     │        │        │
                     │        │        │
                     ▼        ▼        ▼
-                 RPI-01    RPI-02   RPI-03
-              Pi-hole +    Future   Future
-               Unbound    Services Services
+                 dns-01    node-01  node-02
+                 Unbound   Pi-hole  Reserved
+                 .110      .111     .112
                     │
                     ▼
               Internal Network
@@ -249,3 +249,35 @@ Validate the complete Edge DNS Platform.
 - Issues closed
 - Sprint reviewed
 - Release v0.2.0 published
+
+---
+
+# Implementation Outcome
+
+> This section records how the Sprint was actually implemented. The planning content above is kept as the original plan.
+
+## Delivered
+
+| Host (inventory) | IP | Service | Playbook / role |
+|---|---|---|---|
+| `dns-01` | `192.168.0.110` | Unbound, recursive DNS on port `5335` | `playbooks/unbound.yml` / `unbound` |
+| `node-01` | `192.168.0.111` | Pi-hole v6, LAN DNS on port `53` | `playbooks/pihole.yml` / `base/linux`, `pihole` |
+| `node-02` | `192.168.0.112` | Reserved | — |
+
+All Raspberry Pi hosts receive `base/linux` and `base/raspberry` through `playbooks/bootstrap.yml`.
+
+- Pi-hole forwards to Unbound only (`192.168.0.110#5335`), listens in `LOCAL` mode on `eth0`, with DNSSEC and query logging enabled. The role does not manage DHCP or IPv6 settings; Pi-hole DHCP stays at its default (disabled).
+- Unbound listens on `127.0.0.1` and `192.168.0.110` and only accepts queries from `127.0.0.0/8` and `192.168.0.111/32`.
+- Pi-hole is installed from a shallow clone of `https://github.com/pi-hole/pi-hole.git` (branch `master`) using the unattended installer.
+
+## Deviations from the plan
+
+- Pi-hole and Unbound run on two different Raspberry Pis instead of both on `RPI-01`.
+- Host IP addresses come from DHCP reservations on the router (TP-Link Archer C80); they are not configured by Ansible.
+
+## Not delivered / open items
+
+- Runbook and standalone troubleshooting guide (`docs/runbooks/` is empty). Troubleshooting content exists in the `pihole` role README.
+- Release `v0.2.0` has not been published.
+- Known limitation: the Pi-hole configuration tasks always report `changed` and restart `pihole-FTL` on every run.
+
