@@ -2,7 +2,7 @@
 
 > **Sprint:** 02
 >
-> **Status:** Planned
+> **Status:** ✅ Completed
 >
 > **Milestone:** Sprint 02 - Kubernetes Platform Foundation
 >
@@ -897,3 +897,50 @@ At the end of the Sprint, the platform should provide:
                └── Kubernetes API
 
 The resulting platform must be reproducible from code and documented sufficiently for another engineer to understand, provision and validate the environment.
+
+---
+
+# Implementation Outcome
+
+> This section records how the Sprint was actually implemented. The planning content above is kept as the original plan.
+
+## Delivered
+
+| Component | Implementation |
+|---|---|
+| VMs | `kubernetes/opentofu` clones a Debian 13 Cloud-Init template into `kubernetes-pool` on datastore `vmdata`, bridge `vmbr0`, DHCP with fixed MAC addresses |
+| Sizing | `k8s-cp-01`: 2 vCPU / 4 GiB / 20 GiB; workers: 2 vCPU / 2 GiB / 20 GiB each |
+| Node baseline | `base/linux` + `kubernetes/common` (hostname, chrony, `overlay` and `br_netfilter`, sysctl, swap off, `python3-kubernetes`) |
+| Runtime | `kubernetes/containerd`: Debian package `containerd` `1.7.24`, `SystemdCgroup = true`, CNI `bin_dir = /opt/cni/bin` |
+| Packages | `kubernetes/packages`: `kubeadm`, `kubelet`, `kubectl` `v1.37.1` from `pkgs.k8s.io` (minor `v1.37`), held with `dpkg` |
+| Control plane | `kubernetes/control_plane`: `kubeadm init --cri-socket unix:///run/containerd/containerd.sock`; kubeconfig copied to `/home/debian/.kube/config` |
+| Workers | `kubernetes/worker`: join command generated on the control plane with `kubeadm token create --print-join-command` |
+| CNI | `kubernetes/cni`: Helm `4.3.0` + Cilium `1.20.2` (OCI chart), kube-proxy kept, operator with `hostNetwork: false` and API on `:9234` |
+| DNS | `kubernetes/dns`: CoreDNS ConfigMap managed with `kubernetes.core.k8s`; `home.arpa` forwarded to Pi-hole `192.168.0.111` |
+| Validation | `playbooks/kubernetes-validation.yml` / `kubernetes/validation`: services, node readiness, Cilium status, internal, `home.arpa` and external DNS |
+
+Playbook order in `playbooks/kubernetes.yml`:
+
+```text
+base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
+    -> kubernetes/control_plane -> kubernetes/worker -> kubernetes/cni -> kubernetes/dns
+```
+
+## Deviations from the plan
+
+- Ansible structure: in addition to the planned roles, `packages`, `cni`, `dns` and `validation` roles and a `kubernetes-validation.yml` playbook were created.
+- `kubeadm init` uses command-line flags instead of a declarative kubeadm configuration file.
+- No `controlPlaneEndpoint` is configured: the API is reached at `https://192.168.0.130:6443`, not at `k8s-api.home.arpa`.
+- No Pod CIDR is passed to kubeadm; Cilium allocates Pod addresses with its default cluster-pool IPAM instead of `10.244.0.0/16`.
+- The Service CIDR is the kubeadm default `10.96.0.0/12` (the plan documented `10.96.0.0/16`); the DNS Service IP is `10.96.0.10` as planned.
+- Workers join before the CNI is installed; nodes become `Ready` after the `cni` role runs.
+- VM sizing is smaller than planned (see table above).
+- The `home.arpa` records for the Kubernetes nodes were created manually in Pi-hole.
+
+## Not delivered / open items
+
+- Kubernetes runbook and troubleshooting guide in `docs/runbooks/` (troubleshooting content exists in role READMEs).
+- Pod-to-pod and Pod-to-Service connectivity are not covered by the `validation` role (Cilium health checks cover node connectivity).
+- `k8s-api.home.arpa` endpoint.
+- Release `v0.3.0` has not been published.
+

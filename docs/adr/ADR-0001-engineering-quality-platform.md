@@ -1,6 +1,7 @@
 # ADR-0001 — Introduce the Engineering Quality Platform
 
 - Status: Accepted
+- Implementation: Not started (reviewed 2026-10-08)
 - Date: 2026-08-06
 - Authors: Adenn Tumba
 
@@ -145,3 +146,18 @@ Sprint 01 remains open.
 An Engineering Quality Platform Epic will be implemented before continuing the remaining Sprint 01 issues.
 
 This guarantees that every remaining feature will already benefit from automated quality gates.
+
+---
+
+# Implementation Status
+
+> Added 2026-10-08. The decision above is unchanged; this section records what happened afterwards.
+
+- No CI workflow exists yet: `.github/workflows/` contains only `.gitkeep`.
+- No pre-commit configuration exists.
+- Sprint 01 was not paused: it was completed, and Sprint 02 was completed afterwards, without the Engineering Quality Platform.
+- Pull Requests are still validated manually and documented in each PR description.
+- The `review-pr.md` prompt in `ai/prompts/` is still present.
+
+The Epic is tracked in [Epic-Engineering-Quality-Platform.md](../backlog/Epic-Engineering-Quality-Platform.md).
+
