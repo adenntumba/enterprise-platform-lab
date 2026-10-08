@@ -1,0 +1,21 @@
+---
+# Kubernetes validation role defaults
+
+kubernetes_validation_kubeconfig: /etc/kubernetes/admin.conf
+
+kubernetes_validation_control_plane_host: "{{ groups['control_plane'][0] }}"
+
+kubernetes_validation_cilium_namespace: kube-system
+kubernetes_validation_cilium_daemonset: cilium
+
+kubernetes_validation_kubelet_service: kubelet
+kubernetes_validation_containerd_service: containerd
+
+kubernetes_validation_dns_service: kube-dns
+kubernetes_validation_dns_service_ip: 10.96.0.10
+
+kubernetes_validation_edge_dns: 192.168.0.111
+
+kubernetes_validation_test_image: busybox:1.36
+kubernetes_validation_test_pod: dns-validation
+
