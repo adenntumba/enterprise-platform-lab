@@ -11,6 +11,7 @@ kubernetes_required_packages:
   - ipset
   - ethtool
   - util-linux
+  - python3-kubernetes
 
 kubernetes_kernel_modules:
   - overlay
