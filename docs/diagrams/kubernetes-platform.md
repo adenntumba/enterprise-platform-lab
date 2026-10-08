@@ -16,7 +16,7 @@ flowchart TB
     W2["k8s-worker-02<br/>192.168.0.132<br/>Worker"]
 
     CoreDNS["CoreDNS<br/>10.96.0.10"]
-    Cilium["Cilium 1.20.2<br/>cluster-pool IPAM (default 10.0.0.0/8)"]
+    Cilium["Cilium 1.20.2 cluster-pool IPAM<br/>cp-01 10.0.0.0/24<br/>worker-01 10.0.2.0/24<br/>worker-02 10.0.1.0/24"]
 
     Internet --> Router
     Router --> PiHole

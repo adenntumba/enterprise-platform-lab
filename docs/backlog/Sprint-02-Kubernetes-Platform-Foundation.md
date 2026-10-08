@@ -931,8 +931,8 @@ base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
 - Ansible structure: in addition to the planned roles, `packages`, `cni`, `dns` and `validation` roles and a `kubernetes-validation.yml` playbook were created.
 - `kubeadm init` uses command-line flags instead of a declarative kubeadm configuration file.
 - No `controlPlaneEndpoint` is configured: the API is reached at `https://192.168.0.130:6443`, not at `k8s-api.home.arpa`.
-- No Pod CIDR is passed to kubeadm; Cilium allocates Pod addresses with its default cluster-pool IPAM instead of `10.244.0.0/16`.
-- The Service CIDR is the kubeadm default `10.96.0.0/12` (the plan documented `10.96.0.0/16`); the DNS Service IP is `10.96.0.10` as planned.
+- No Pod CIDR is passed to kubeadm; Cilium allocates one `/24` per node from `10.0.0.0/8` (cluster-pool IPAM) instead of the planned `10.244.0.0/16`. Effective: `k8s-cp-01` `10.0.0.0/24`, `k8s-worker-01` `10.0.2.0/24`, `k8s-worker-02` `10.0.1.0/24`.
+- The Service CIDR is the kubeadm default `10.96.0.0/12`, verified in the kube-apiserver manifest (the plan documented `10.96.0.0/16`); the DNS Service IP is `10.96.0.10` as planned.
 - Workers join before the CNI is installed; nodes become `Ready` after the `cni` role runs.
 - VM sizing is smaller than planned (see table above).
 - The `home.arpa` records for the Kubernetes nodes were created manually in Pi-hole.

@@ -60,9 +60,13 @@ Planned (not implemented): `k8s-api.home.arpa -> 192.168.0.130`, set as `control
 
 No Pod CIDR is passed to kubeadm.
 
-Pod addresses are allocated by Cilium using its default cluster-pool IPAM ((`10.0.0.0/8`, one `/24` per node)).
+Pod addresses are allocated by Cilium using its cluster-pool IPAM: one `/24` per node from the `10.0.0.0/8` pool (chart default).
 
-The originally planned Pod CIDR was `10.244.0.0/16`.
+Effective allocation: `k8s-cp-01` `10.0.0.0/24`, `k8s-worker-01` `10.0.2.0/24`, `k8s-worker-02` `10.0.1.0/24`.
+
+No Service CIDR is passed either, so the Service CIDR is the kubeadm default `10.96.0.0/12`.
+
+The ADR-0002 targets (`10.244.0.0/16` for Pods, `10.96.0.0/16` for Services) are not applied. See [network-architecture.md](network-architecture.md#target-configuration-and-runtime-state).
 
 ## 6. Worker Bootstrap
 

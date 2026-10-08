@@ -91,15 +91,28 @@ LAN 192.168.0.0/24
 
 ## 5. Network Model
 
-The initial networks are:
+The architecture target (ADR-0002), the repository configuration and the effective runtime state differ. This table is the reference:
 
-| Network | CIDR | Purpose |
-|---|---|---|
-| LAN | `192.168.0.0/24` | Physical and VM network |
-| Pods | Cilium cluster-pool IPAM default (`10.0.0.0/8`, one `/24` per node) | Kubernetes Pod network |
-| Services | `10.96.0.0/12` (kubeadm default) | Kubernetes Service network |
+| Item | Architectural target (ADR-0002) | Repository configuration | Effective runtime state (verified 2026-10-08) |
+|---|---|---|---|
+| Pod CIDR | `10.244.0.0/16` | not set: no `--pod-network-cidr` / `podSubnet` in `kubeadm init` | allocated by Cilium per node (see below) |
+| Cilium IPAM | not specified | chart defaults: no IPAM values passed to Helm | `cluster-pool`, one `/24` per node from `10.0.0.0/8` |
+| Service CIDR | `10.96.0.0/16` | not set: no `--service-cidr` / `serviceSubnet` | `10.96.0.0/12` (kubeadm default), from `--service-cluster-ip-range` in the kube-apiserver manifest |
+| DNS Service IP | `10.96.0.10` | not set (derived from the Service CIDR) | `10.96.0.10` |
+| API endpoint | `k8s-api.home.arpa:6443` | not set: no `--control-plane-endpoint` / `controlPlaneEndpoint` | `https://192.168.0.130:6443` |
+| DNS | CoreDNS → Pi-hole → Unbound | `kubernetes/dns` Corefile: `home.arpa` → `192.168.0.111`, other domains → `/etc/resolv.conf` | as configured; validated by `kubernetes/validation` |
 
-The Pod and Service CIDRs are not set explicitly: `kubeadm init` receives no `--pod-network-cidr` or `--service-cidr`, and the Cilium Helm release does not override its IPAM settings. The originally planned values were `10.244.0.0/16` (Pods) and `10.96.0.0/16` (Services); see the Implementation Notes in ADR-0002.
+Effective Pod CIDRs per node:
+
+| Node | Pod CIDR |
+|---|---|
+| `k8s-cp-01` | `10.0.0.0/24` |
+| `k8s-worker-01` | `10.0.2.0/24` |
+| `k8s-worker-02` | `10.0.1.0/24` |
+
+The ADR values `10.244.0.0/16`, `10.96.0.0/16` and `k8s-api.home.arpa` are **architectural targets**. They are not deployed.
+
+`kubeadm init` receives no `--pod-network-cidr`, `--service-cidr` or `--control-plane-endpoint`, and the Cilium Helm release does not override its IPAM settings. Verification commands are in [network-architecture.md](network-architecture.md#9-verifying-the-effective-state).
 
 The Pod and Service CIDRs must not overlap with the LAN or other networks used by the lab.
 

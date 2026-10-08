@@ -66,9 +66,15 @@ That capability can be evaluated later after the baseline cluster is stable.
 
 ## 6. Pod CIDR
 
-The Cilium Helm release does not override its IPAM settings, so Pods use the Cilium cluster-pool IPAM default ((`10.0.0.0/8`, one `/24` per node)).
+The Cilium Helm release does not override its IPAM settings, so Pods use Cilium cluster-pool IPAM: one `/24` per node from the `10.0.0.0/8` pool (chart default).
 
-The originally planned Pod CIDR was `10.244.0.0/16`; it is not configured.
+| Node | Effective Pod CIDR |
+|---|---|
+| `k8s-cp-01` | `10.0.0.0/24` |
+| `k8s-worker-01` | `10.0.2.0/24` |
+| `k8s-worker-02` | `10.0.1.0/24` |
+
+The ADR-0002 target `10.244.0.0/16` is not configured. See [network-architecture.md](network-architecture.md#target-configuration-and-runtime-state).
 
 ## 7. Implementation
 

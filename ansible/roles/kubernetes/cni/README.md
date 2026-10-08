@@ -201,10 +201,18 @@ All other values use the chart defaults. In particular:
 
 No Pod CIDR is passed to `kubeadm init`, so the Pod addresses come from the Cilium IPAM settings above. The planned `10.244.0.0/16` from ADR-0002 is not applied.
 
-To confirm the Pod CIDRs in use:
+Effective Pod CIDRs (verified 2026-10-08):
 
 ```bash
-kubectl get ciliumnodes -o custom-columns=NODE:.metadata.name,PODCIDRS:.spec.ipam.podCIDRs
+kubectl get ciliumnodes \
+  -o custom-columns=NODE:.metadata.name,PODCIDRS:.spec.ipam.podCIDRs
+```
+
+```text
+NODE            PODCIDRS
+k8s-cp-01       [10.0.0.0/24]
+k8s-worker-01   [10.0.2.0/24]
+k8s-worker-02   [10.0.1.0/24]
 ```
 
 ---
