@@ -1,0 +1,34 @@
+---
+# Kubernetes worker node tasks
+
+- name: Check if Kubernetes worker is already joined
+  ansible.builtin.stat:
+    path: "{{ kubernetes_worker_kubelet_config }}"
+  register: kubernetes_worker_joined
+
+- name: Generate Kubernetes worker join command
+  ansible.builtin.command:
+    cmd: kubeadm token create --print-join-command
+  delegate_to: "{{ kubernetes_worker_control_plane_host }}"
+  run_once: true
+  register: kubernetes_worker_join_command
+  changed_when: false
+  no_log: true
+  when: >-
+    not kubernetes_worker_joined.stat.exists
+
+- name: Join Kubernetes worker to the cluster
+  ansible.builtin.command:
+    cmd: >-
+      {{ kubernetes_worker_join_command.stdout | trim }}
+      --cri-socket {{ kubernetes_worker_cri_socket }}
+    creates: "{{ kubernetes_worker_kubelet_config }}"
+  register: kubernetes_worker_join
+  no_log: true
+  when: not kubernetes_worker_joined.stat.exists
+
+- name: Ensure kubelet service is enabled and started
+  ansible.builtin.systemd:
+    name: kubelet
+    enabled: true
+    state: started

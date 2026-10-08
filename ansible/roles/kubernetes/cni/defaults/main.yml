@@ -14,3 +14,5 @@ cilium_chart: oci://quay.io/cilium/charts/cilium
 cilium_kubeconfig: /etc/kubernetes/admin.conf
 
 cilium_operator_host_network: false
+
+cilium_operator_api_serve_addr: ":9234"
