@@ -263,6 +263,7 @@ enterprise-platform-lab
 
 | Document | Description |
 |----------|-------------|
+<<<<<<< Updated upstream
 | [docs/PROJECT_CHARTER.md](docs/PROJECT_CHARTER.md) | Vision, mission and engineering principles |
 | [docs/PROJECT_BACKLOG.md](docs/PROJECT_BACKLOG.md) | Project backlog (Single Source of Truth) |
 | [docs/ROADMAP.md](docs/ROADMAP.md) | High-level implementation roadmap |
@@ -273,6 +274,17 @@ enterprise-platform-lab
 | [infrastructure/proxmox/README.md](infrastructure/proxmox/README.md) | Proxmox foundation (OpenTofu) |
 | [kubernetes/opentofu/README.md](kubernetes/opentofu/README.md) | Kubernetes VM provisioning (OpenTofu) |
 | `ansible/roles/**/README.md` | One README per Ansible role |
+=======
+| PROJECT_CHARTER.md | Vision, mission and engineering principles |
+| PROJECT_BACKLOG.md | Project backlog (Single Source of Truth) |
+| ROADMAP.md | High-level implementation roadmap |
+| [Kubernetes Platform Architecture](docs/architecture/kubernetes/platform.md) | Kubernetes, infrastructure, network, inventory, automation, CNI, DNS, and validation reference |
+| [Kubernetes Platform Runbook](docs/runbooks/kubernetes-platform.md) | Provisioning, health checks, troubleshooting, and recovery guidance |
+| docs/backlog | Sprint planning |
+| docs/adr | Architecture Decision Records |
+| docs/architecture | Architecture documentation |
+| docs/diagrams | Infrastructure diagrams |
+>>>>>>> Stashed changes
 
 ---
 
