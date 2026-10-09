@@ -145,7 +145,7 @@ The next objective is to establish the core services required by the Kubernetes 
 Open items carried over from Sprint 02:
 
 - Release `v0.3.0` (only `v0.1.0` has been published; `v0.2.0` for Sprint 01 is also pending).
-- Kubernetes runbook and troubleshooting guide in `docs/runbooks/`.
+- Edge DNS runbook in `docs/runbooks/` (the Kubernetes runbook exists: `docs/runbooks/kubernetes-platform.md`).
 - Automation of the `home.arpa` DNS records, which are currently created manually in Pi-hole.
 - The [Engineering Quality Platform](backlog/Epic-Engineering-Quality-Platform.md) Epic (CI), accepted in ADR-0001 but not started.
 

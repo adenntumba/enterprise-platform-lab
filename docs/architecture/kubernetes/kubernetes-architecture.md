@@ -4,6 +4,8 @@
 
 This document defines the technical architecture of the first upstream Kubernetes cluster in the Enterprise Platform Lab.
 
+For an operational overview see [platform.md](platform.md) and the [Kubernetes platform runbook](../../runbooks/kubernetes-platform.md).
+
 The platform is designed to be reproducible, automated, documented, and capable of evolving toward a production-like architecture.
 
 ## 2. Architecture Overview

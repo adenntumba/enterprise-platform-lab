@@ -939,7 +939,8 @@ base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
 
 ## Not delivered / open items
 
-- Kubernetes runbook and troubleshooting guide in `docs/runbooks/` (troubleshooting content exists in role READMEs).
+- Delivered after the initial review: [Kubernetes platform architecture](../architecture/kubernetes/platform.md) and [Kubernetes platform runbook](../runbooks/kubernetes-platform.md) (Issue #36).
+- No etcd or workload backup procedure.
 - Pod-to-pod and Pod-to-Service connectivity are not covered by the `validation` role (Cilium health checks cover node connectivity).
 - `k8s-api.home.arpa` endpoint.
 - Release `v0.3.0` has not been published.

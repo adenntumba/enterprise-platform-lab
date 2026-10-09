@@ -2,9 +2,29 @@
 
 ## Scope and Status
 
-This document describes the Kubernetes platform declared by this repository. It is an architecture and automation snapshot, not evidence that the cluster is currently provisioned or healthy. Confirm live state with the validation procedure before operating workloads.
+This document describes the Kubernetes platform declared by this repository and, where stated, the effective runtime state read from the live cluster on 2026-10-08. It distinguishes three layers:
+
+```text
+Architectural target (ADR-0002)
+        ↓
+Repository configuration (Ansible / OpenTofu)
+        ↓
+Effective runtime state (live cluster)
+```
+
+Confirm live state with the validation procedure before operating workloads; runtime values can change if the cluster is rebuilt.
 
 The platform uses upstream Kubernetes on Proxmox VE virtual machines. OpenTofu provisions infrastructure, Ansible configures Linux and Kubernetes, kubeadm bootstraps the cluster, containerd runs containers, and Cilium provides pod networking.
+
+| Component | Version |
+| --- | --- |
+| Debian (VM template) | 13 |
+| Kubernetes (`kubeadm`, `kubelet`, `kubectl`) | `v1.37.1` (apt repository `v1.37`, packages held) |
+| containerd | `1.7.24` (Debian package) |
+| Cilium | `1.20.2` |
+| Helm | `4.3.0` |
+
+Kubernetes v1.35 was announced as the last release to support containerd 1.x; the cluster runs and validates with this combination, but it should be reviewed.
 
 ## Architecture
 
@@ -44,7 +64,7 @@ The cluster is a single-control-plane design and is not highly available. The fu
 
 The Proxmox host (`pve`, `192.168.0.120`) runs the Kubernetes VMs on bridge `vmbr0`, in the `kubernetes-pool`, using the `vmdata` datastore. The repository separates shared Proxmox foundations in `infrastructure/proxmox/` from Kubernetes VM lifecycle in `kubernetes/opentofu/`.
 
-The current Kubernetes VM definitions use Debian Cloud-Init template ID `9000`, DHCP for IPv4, the `debian` account, and the local `~/.ssh/id_ed25519.pub` key. Each VM has 2 vCPUs and a 20 GiB disk; the control plane has 4096 MiB RAM and each worker has 2048 MiB. The VM names, MAC addresses, and desired roles are defined in `kubernetes/opentofu/terraform.tfvars.example`; treat that file as an example, not as proof of the values applied to Proxmox.
+The current Kubernetes VM definitions use Debian Cloud-Init template ID `9000`, DHCP for IPv4, the `debian` account, and the local `~/.ssh/id_ed25519.pub` key. Each VM has 2 vCPUs and a 20 GiB disk; the control plane has 4096 MiB RAM and each worker has 2048 MiB. The VM names, MAC addresses, and desired roles are defined in `kubernetes/opentofu/terraform.tfvars.example`. The local `terraform.tfvars` is not versioned; the owner confirmed that the deployed VMs use the values from the example.
 
 OpenTofu provisions VMs. Ansible configures the operating system and Kubernetes. Kubernetes manages workloads. These are separate ownership boundaries; do not manage the same VM lifecycle from both OpenTofu roots.
 
@@ -58,9 +78,28 @@ The documented LAN is `192.168.0.0/24`, with the router at `192.168.0.1`. The Ku
 | `k8s-worker-01` | Worker | `192.168.0.131` | 2 | 2048 MiB | 20 GiB |
 | `k8s-worker-02` | Worker | `192.168.0.132` | 2 | 2048 MiB | 20 GiB |
 
-The VM configuration requests DHCP, while Ansible uses fixed inventory addresses. Ensure the DHCP server reserves the VM MAC addresses to these addresses, or update the inventory to match the addresses actually assigned, before running Ansible. The current VM configuration does not set the static addresses itself.
+The VM configuration requests DHCP, while Ansible uses fixed inventory addresses. The router (TP-Link Archer C80) has DHCP reservations that map the VM MAC addresses (`BC:24:11:01:00:01`–`03`) to these addresses (validated in PR #38). The VM configuration does not set static addresses itself; when adding or recreating a VM, create the reservation before running Ansible.
 
-ADR-0002 declares pod CIDR `10.244.0.0/16`, service CIDR `10.96.0.0/16`, and API name `k8s-api.home.arpa`. These are architectural targets, not all wired into the current bootstrap: the `kubeadm init` task does not pass the pod network CIDR or a control-plane endpoint, and the inventory contains no API load balancer. The validation role expects the DNS service IP `10.96.0.10`.
+### Target, configuration and runtime state
+
+| Item | Architectural target (ADR-0002) | Repository configuration | Effective runtime state (verified 2026-10-08) |
+| --- | --- | --- | --- |
+| Pod CIDR | `10.244.0.0/16` | not set: no `--pod-network-cidr` / `podSubnet` | allocated per node by Cilium (see below) |
+| Cilium IPAM | not specified | chart defaults: no IPAM values passed to Helm | `cluster-pool`, one `/24` per node from `10.0.0.0/8` |
+| Service CIDR | `10.96.0.0/16` | not set: no `--service-cidr` / `serviceSubnet` | `10.96.0.0/12` (kubeadm default, `--service-cluster-ip-range` in the kube-apiserver manifest) |
+| DNS Service IP | `10.96.0.10` | not set (derived from the Service CIDR) | `10.96.0.10` |
+| API endpoint | `k8s-api.home.arpa:6443` | not set: no `--control-plane-endpoint` | `https://192.168.0.130:6443` |
+| DNS | CoreDNS → Pi-hole → Unbound | `home.arpa` → `192.168.0.111`; other domains → `/etc/resolv.conf` | as configured; validated by `kubernetes/validation` |
+
+| Node | Effective Pod CIDR |
+| --- | --- |
+| `k8s-cp-01` | `10.0.0.0/24` |
+| `k8s-worker-01` | `10.0.2.0/24` |
+| `k8s-worker-02` | `10.0.1.0/24` |
+
+`10.244.0.0/16`, `10.96.0.0/16` and `k8s-api.home.arpa` are architectural targets from ADR-0002, not the deployed state. Verification commands and expected output are in [network-architecture.md](network-architecture.md#9-verifying-the-effective-state).
+
+The `kubeadm init` task passes only `--cri-socket`, and the inventory contains no API load balancer.
 
 ## Node Inventory
 
@@ -84,7 +123,7 @@ Run Ansible commands from the `ansible/` directory so `ansible.cfg` supplies the
 2. `playbooks/kubernetes.yml` applies the Linux baseline and Kubernetes prerequisites to every Kubernetes node, initializes the control plane with kubeadm, joins workers, installs Cilium with Helm, then configures CoreDNS.
 3. `playbooks/kubernetes-validation.yml` checks node services, cluster readiness, Cilium, and internal, edge, and external DNS.
 
-The Kubernetes baseline loads kernel modules `overlay` and `br_netfilter`, enables IPv4 forwarding and bridge netfilter sysctls, installs required packages, and configures time synchronization. The runtime role configures containerd to use the systemd cgroup driver. The package role installs `kubeadm`, `kubelet`, and `kubectl` from the Kubernetes `v1.37` apt repository.
+The Kubernetes baseline loads kernel modules `overlay` and `br_netfilter`, enables IPv4 forwarding and bridge netfilter sysctls, installs required packages, and configures time synchronization. The runtime role configures containerd to use the systemd cgroup driver and sets the CNI `bin_dir` to `/opt/cni/bin`, where Cilium installs `cilium-cni`. The package role installs `kubeadm`, `kubelet`, and `kubectl` from the Kubernetes `v1.37` apt repository.
 
 Control-plane initialization is guarded by `/etc/kubernetes/admin.conf`; worker joining is guarded by `/etc/kubernetes/kubelet.conf`. Worker join tokens are generated at execution time and hidden by Ansible logging. Do not copy join tokens or kubeconfig credentials into Git or issue comments.
 
@@ -108,7 +147,7 @@ Review the plan and confirm the target Proxmox node, template, pool, datastore, 
 
 The Ansible CNI role installs Helm `4.3.0` when needed and manages the Cilium Helm release `cilium` in `kube-system` from `oci://quay.io/cilium/charts/cilium`, pinned to Cilium `1.20.2`. It waits for Helm to complete and detects changes in the release/chart values before upgrading. kube-proxy replacement is not configured; ADR-0002 says to keep kube-proxy enabled initially.
 
-The declared pod CIDR is `10.244.0.0/16`, but the current `kubeadm init` and Cilium Helm command do not explicitly configure that CIDR or Cilium IPAM mode. Confirm actual pod allocation and CNI health on a live cluster rather than assuming the ADR value was applied.
+The ADR-0002 target pod CIDR is `10.244.0.0/16`, but neither `kubeadm init` nor the Cilium Helm command configures a pod CIDR or IPAM mode. Cilium therefore uses its cluster-pool IPAM defaults and allocates one `/24` per node from `10.0.0.0/8`: `k8s-cp-01` `10.0.0.0/24`, `k8s-worker-01` `10.0.2.0/24`, `k8s-worker-02` `10.0.1.0/24` (verified 2026-10-08). Hubble is enabled by the chart defaults; Relay and UI are not deployed.
 
 ## DNS Flow
 
@@ -116,7 +155,7 @@ The current automation configures CoreDNS as follows:
 
 - `cluster.local` and reverse cluster zones are answered by the Kubernetes plugin.
 - Queries for `home.arpa` are forwarded to Pi-hole at `192.168.0.111`.
-- Other non-cluster queries are forwarded to the CoreDNS pod's `/etc/resolv.conf` upstream.
+- Other non-cluster queries are forwarded to the CoreDNS pod's `/etc/resolv.conf`, which is inherited from the node (provided by DHCP).
 - Pi-hole forwards upstream queries to Unbound at `192.168.0.110:5335`.
 - Unbound listens on port `5335` and allows the Pi-hole address `192.168.0.111/32` (as well as loopback).
 
@@ -148,16 +187,24 @@ kubectl get pods -A
 kubectl -n kube-system get pods -o wide
 kubectl -n kube-system exec ds/cilium -- cilium status
 kubectl -n kube-system get configmap coredns -o yaml
+kubectl get ciliumnodes -o custom-columns=NODE:.metadata.name,PODCIDRS:.spec.ipam.podCIDRs
+sudo grep "service-cluster-ip-range" /etc/kubernetes/manifests/kube-apiserver.yaml
 ```
+
+The expected output of the last two commands is listed in [network-architecture.md](network-architecture.md#9-verifying-the-effective-state).
 
 See the [Kubernetes platform diagrams](../../diagrams/kubernetes-platform.md) and [operational runbook](../../runbooks/kubernetes-platform.md) for visual context and recovery steps.
 
 ## Known Gaps to Reconcile
 
-- DHCP allocation must agree with the static Ansible inventory addresses.
-- ADR-0002's pod CIDR and API endpoint are not passed to `kubeadm init`; the cluster is currently described as single-control-plane without a load balancer.
+- ADR-0002's pod CIDR (`10.244.0.0/16`), Service CIDR (`10.96.0.0/16`) and API endpoint (`k8s-api.home.arpa`) are not configured; the effective values are `10.0.0.0/8` cluster-pool, `10.96.0.0/12` and `192.168.0.130:6443`.
+- Without `controlPlaneEndpoint`, kubeadm cannot add control-plane nodes later; the HA plan requires a re-initialization or a migration.
 - The Cilium deployment command does not explicitly set IPAM/pod CIDR values.
 - CoreDNS forwards only `home.arpa` directly to Pi-hole; the general upstream is `/etc/resolv.conf`.
-- The Proxmox provider credential and variable-file requirements should be verified against the local provider configuration before the first plan/apply.
+- The `home.arpa` records for the Kubernetes nodes are created manually in Pi-hole; the validation role depends on them.
+- containerd `1.7.24` with Kubernetes `v1.37.1` is outside the announced containerd 1.x support window.
+- There is no `ansible/requirements.yml` for the `community.general` and `kubernetes.core` collections.
+- No etcd or workload backup procedure is defined.
+- DHCP reservations must be kept in sync with the static Ansible inventory addresses.
 
-These are configuration/reconciliation items, not claims about the live cluster. Update this document when the source automation or architecture decision changes.
+Update this document when the source automation, the architecture decision or the live cluster changes.
