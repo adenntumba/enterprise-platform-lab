@@ -8,13 +8,24 @@ validation for the Enterprise Platform Lab.
 The role is responsible for identifying and validating Raspberry Pi
 hosts before platform-specific workloads are deployed.
 
+It is applied to the `raspberry` group by `playbooks/bootstrap.yml`, after `base/linux`.
+
 ## Responsibilities
 
-- Validate the operating system.
-- Validate the expected architecture.
-- Detect the Raspberry Pi hardware model.
-- Validate that the target host is a Raspberry Pi.
-- Expose Raspberry Pi platform information.
+- Validate that the operating system is Linux.
+- Validate the expected architecture (`aarch64`).
+- Read the hardware model from `/proc/device-tree/model`.
+- Validate that the model contains `Raspberry Pi`.
+- Display platform information (model, architecture, kernel, distribution).
+
+The role only validates and reports. It does not change the host.
+
+## Variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `raspberry_expected_architecture` | `aarch64` | Architecture required by the role |
+| `raspberry_model_path` | `/proc/device-tree/model` | File used to detect the hardware model |
 
 ## Design Principles
 
@@ -46,3 +57,16 @@ base/raspberry
     |
     v
 Platform-specific services
+```
+
+## Example
+
+```yaml
+- hosts: raspberry
+  become: true
+  gather_facts: true
+
+  roles:
+    - role: base/linux
+    - role: base/raspberry
+```

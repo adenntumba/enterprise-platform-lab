@@ -29,11 +29,13 @@ Containers
 
 Kubernetes communicates with the runtime through the Container Runtime Interface (CRI).
 
-The expected containerd socket is:
+The containerd socket used by kubeadm is:
 
 ```text
-unix:///var/run/containerd/containerd.sock
+unix:///run/containerd/containerd.sock
 ```
+
+(`/var/run` is a symlink to `/run` on Debian.)
 
 ## 5. Cgroups
 
@@ -61,11 +63,14 @@ containerd was selected because it provides a straightforward CRI-based runtime 
 
 ## 8. Automation
 
-Ansible will manage:
+The `kubernetes/containerd` Ansible role manages:
 
-- installation;
-- configuration;
-- CRI configuration;
-- cgroup configuration;
-- service state;
-- runtime validation.
+- installation of the Debian package `containerd` (`1.7.24` on Debian 13);
+- generation of `/etc/containerd/config.toml` with `containerd config default` when it does not exist;
+- `SystemdCgroup = true`;
+- CNI `bin_dir = "/opt/cni/bin"`, required by Cilium;
+- service state (enabled and started, restarted on configuration changes).
+
+Runtime validation (service active) is done by the `kubernetes/validation` role.
+
+Note: Kubernetes v1.35 was announced as the last release to support containerd 1.x. The cluster runs Kubernetes `v1.37.1` with containerd `1.7.24`; this combination should be reviewed.

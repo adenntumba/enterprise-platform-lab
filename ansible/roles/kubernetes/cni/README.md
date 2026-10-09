@@ -1,24 +1,26 @@
 # Kubernetes CNI — Cilium
 
-## Objetivo
+## Objective
 
-Configurar o **Cilium** como Container Network Interface (CNI) do cluster Kubernetes provisionado pelo laboratório.
+Configure **Cilium** as the Container Network Interface (CNI) of the Kubernetes cluster provisioned by the lab.
 
-O role é responsável por:
+The role is responsible for:
 
-- Garantir a instalação do Helm;
-- Validar a versão do Helm;
-- Instalar ou atualizar o Cilium;
-- Configurar o Cilium Operator;
-- Garantir configuração compatível com a topologia do laboratório;
-- Manter a instalação idempotente;
-- Permitir que o estado do Cilium seja reconciliado pelo Ansible.
+- ensuring Helm is installed;
+- validating the Helm version;
+- installing or upgrading Cilium;
+- configuring the Cilium Operator;
+- keeping the configuration compatible with the lab topology;
+- keeping the installation idempotent;
+- letting Ansible reconcile the Cilium state.
+
+The role runs on the `control_plane` group in `playbooks/kubernetes.yml`, after `kubernetes/worker` and before `kubernetes/dns`. It was created for Issue #32.
 
 ---
 
-# Contexto
+# Context
 
-O cluster Kubernetes utiliza:
+The Kubernetes cluster uses:
 
 - Debian 13;
 - Kubernetes `v1.37.1`;
@@ -26,7 +28,7 @@ O cluster Kubernetes utiliza:
 - Cilium `1.20.2`;
 - Helm `4.3.0`.
 
-Topologia atual:
+Current topology:
 
 ```text
                     Kubernetes Cluster
@@ -50,28 +52,28 @@ Topologia atual:
 
 ---
 
-# Por que Cilium?
+# Why Cilium?
 
-Cilium é utilizado como CNI do cluster para fornecer conectividade de rede entre Pods e nós Kubernetes.
+Cilium is the cluster CNI and provides network connectivity between Pods and Kubernetes nodes.
 
-Além da função básica de CNI, o Cilium possui recursos adicionais de rede, segurança e observabilidade.
+Beyond the basic CNI function, Cilium provides additional networking, security and observability features.
 
-No laboratório, ele também permite evoluir posteriormente para recursos como:
+In the lab, it allows later evolution towards:
 
 - NetworkPolicy;
-- observabilidade de rede;
-- Hubble;
-- controle de tráfego;
-- políticas baseadas em identidade;
-- recursos avançados de networking.
+- network observability;
+- Hubble Relay and UI;
+- traffic control;
+- identity-based policies;
+- advanced networking features.
 
-A escolha também mantém o laboratório próximo de arquiteturas modernas de Kubernetes utilizadas em ambientes profissionais.
+The choice also keeps the lab close to modern Kubernetes architectures used in professional environments. The decision is recorded in ADR-0002 and `docs/architecture/kubernetes/cni-decision.md`.
 
 ---
 
-# Arquitetura
+# Architecture
 
-A comunicação de rede do cluster segue aproximadamente:
+The cluster networking roughly follows:
 
 ```text
                     Kubernetes API
@@ -95,31 +97,31 @@ A comunicação de rede do cluster segue aproximadamente:
              └────────────┴────────────┘
 ```
 
-Cada nó possui um Cilium Agent executado como DaemonSet.
+Each node runs a Cilium Agent as part of a DaemonSet.
 
-O Cilium Operator é executado como Deployment com duas réplicas.
+The Cilium Operator runs as a Deployment with two replicas (chart default).
 
 ---
 
-# Componentes
+# Components
 
 ## Helm
 
-O Helm é utilizado para instalar e gerenciar o Cilium.
+Helm is used to install and manage Cilium.
 
-Versão utilizada:
+Version:
 
 ```text
 Helm 4.3.0
 ```
 
-O role verifica se a versão esperada está instalada antes de continuar.
+The role runs `helm version --short`. If Helm is missing or the version differs, it downloads the official installer `https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4`, runs it with `--version v4.3.0`, removes it, and asserts the installed version.
 
 ---
 
 ## Cilium
 
-Versão utilizada:
+Version:
 
 ```text
 Cilium 1.20.2
@@ -131,33 +133,33 @@ Chart:
 oci://quay.io/cilium/charts/cilium
 ```
 
-A versão é explicitamente fixada para evitar atualizações inesperadas.
+The version is pinned to avoid unexpected upgrades.
 
 ---
 
 ## Cilium Operator
 
-O Operator executa funções de controle do Cilium que não precisam estar presentes em todos os nós.
+The Operator runs Cilium control functions that do not need to run on every node.
 
-O laboratório utiliza:
+The lab uses the chart default:
 
 ```text
 2 replicas
 ```
 
-As réplicas são distribuídas entre os nós do cluster através das regras de afinidade do chart.
+The replicas are spread across the cluster nodes by the chart affinity rules.
 
 ---
 
-# Configuração
+# Configuration
 
-As principais variáveis estão em:
+The main variables are in:
 
 ```text
 defaults/main.yml
 ```
 
-Configuração atual:
+Current configuration:
 
 ```yaml
 helm_version: "4.3.0"
@@ -177,182 +179,218 @@ cilium_operator_host_network: false
 cilium_operator_api_serve_addr: ":9234"
 ```
 
+The Helm command run by the role is:
+
+```bash
+helm upgrade --install cilium oci://quay.io/cilium/charts/cilium \
+  --version 1.20.2 \
+  --namespace kube-system \
+  --kubeconfig /etc/kubernetes/admin.conf \
+  --set operator.hostNetwork=false \
+  --set-string operator.extraArgs[0]=--operator-api-serve-addr=:9234 \
+  --wait
+```
+
+All other values use the chart defaults. In particular:
+
+| Setting | Value |
+|---|---|
+| kube-proxy replacement | not enabled (kube-proxy is kept) |
+| IPAM | Cilium cluster-pool (chart default `10.0.0.0/8`, one `/24` per node) |
+| Hubble | enabled by default; Relay and UI not deployed |
+
+No Pod CIDR is passed to `kubeadm init`, so the Pod addresses come from the Cilium IPAM settings above. The planned `10.244.0.0/16` from ADR-0002 is not applied.
+
+Effective Pod CIDRs (verified 2026-10-08):
+
+```bash
+kubectl get ciliumnodes \
+  -o custom-columns=NODE:.metadata.name,PODCIDRS:.spec.ipam.podCIDRs
+```
+
+```text
+NODE            PODCIDRS
+k8s-cp-01       [10.0.0.0/24]
+k8s-worker-01   [10.0.2.0/24]
+k8s-worker-02   [10.0.1.0/24]
+```
+
 ---
 
-# Cilium Operator e hostNetwork
+# Cilium Operator and hostNetwork
 
-O Operator utiliza:
+The Operator uses:
 
 ```yaml
 cilium_operator_host_network: false
 ```
 
-Isso significa que o Operator utiliza a rede do próprio Pod.
+This means the Operator uses the Pod network.
 
-Essa decisão é importante porque o cluster possui múltiplos nós e duas réplicas do Operator.
+This matters because the cluster has multiple nodes and two Operator replicas.
 
-Utilizar `hostNetwork=true` faria o processo utilizar diretamente a rede do nó Kubernetes.
+With `hostNetwork=true`, the process would use the node network directly.
 
-Isso poderia provocar conflitos de portas quando múltiplas réplicas fossem executadas no mesmo nó.
+That could cause port conflicts when multiple replicas run on the same node.
 
 ---
 
 # Operator API
 
-O Operator expõe uma API utilizada pelos probes de saúde.
+The Operator exposes an API used by the health probes.
 
-A configuração utilizada é:
+The configuration is:
 
 ```yaml
 cilium_operator_api_serve_addr: ":9234"
 ```
 
-O argumento efetivamente aplicado ao container é:
+The argument applied to the container is:
 
 ```text
 --operator-api-serve-addr=:9234
 ```
 
-## Por que isso é necessário?
+## Why is this needed?
 
-Com:
+With:
 
 ```yaml
 operator.hostNetwork: false
 ```
 
-o Operator utiliza o namespace de rede do Pod.
+the Operator uses the Pod network namespace.
 
-O Kubernetes realiza os probes utilizando o endereço do Pod.
+Kubernetes runs the probes against the Pod address.
 
-Inicialmente o Operator estava configurado para escutar somente em:
+Initially the Operator listened only on:
 
 ```text
 127.0.0.1:9234
 ```
 
-Nesse cenário, o processo estava funcionando, porém o probe acessava o endereço IP do Pod:
+The process was working, but the probe targeted the Pod IP:
 
 ```text
 Pod IP:9234
 ```
 
-O resultado era:
+The result was:
 
 ```text
 connection refused
 ```
 
-O Operator entrava em reinicialização e permanecia em:
+The Operator kept restarting and stayed in:
 
 ```text
 CrashLoopBackOff
 ```
 
-A configuração:
+The setting:
 
 ```text
 --operator-api-serve-addr=:9234
 ```
 
-faz o processo escutar na interface do Pod, permitindo que os probes funcionem corretamente.
+makes the process listen on the Pod interface, so the probes work.
 
 ---
 
-# Containerd e CNI
+# containerd and CNI
 
-O Cilium instala o binário CNI:
+Cilium installs the CNI binary:
 
 ```text
 /opt/cni/bin/cilium-cni
 ```
 
-O containerd precisa procurar os binários CNI no mesmo diretório.
+containerd must look for CNI binaries in the same directory.
 
-Por isso o laboratório utiliza:
+The lab therefore uses:
 
 ```text
 /opt/cni/bin
 ```
 
-Configuração:
+Configuration (in the `kubernetes/containerd` role):
 
 ```yaml
 containerd_cni_bin_dir: /opt/cni/bin
 ```
 
-O containerd é configurado para utilizar:
+containerd is configured with:
 
 ```text
 bin_dir = "/opt/cni/bin"
 ```
 
-Essa configuração é fundamental para que o runtime consiga executar o Cilium CNI.
+This setting is required for the runtime to execute the Cilium CNI.
 
 ---
 
-# Problema encontrado
+# Problem Found
 
-Durante a instalação inicial, o containerd estava procurando o CNI em:
+During the initial installation, containerd was looking for CNI plugins in:
 
 ```text
 /usr/lib/cni
 ```
 
-Enquanto o Cilium instalava:
+While Cilium installed:
 
 ```text
 /opt/cni/bin/cilium-cni
 ```
 
-O resultado foi o erro:
+The result was the error:
 
 ```text
 failed to find plugin "cilium-cni" in path [/usr/lib/cni]
 ```
 
-Como consequência, Pods como o CoreDNS permaneciam em:
+As a consequence, Pods such as CoreDNS stayed in:
 
 ```text
 ContainerCreating
 ```
 
-A solução foi configurar o containerd para utilizar:
+The solution was to configure containerd to use:
 
 ```text
 /opt/cni/bin
 ```
 
-Essa configuração foi incorporada ao role do containerd para que o estado não dependa de configuração manual.
+This setting was added to the containerd role so the state does not depend on manual configuration.
 
 ---
 
-# Idempotência
+# Idempotency
 
-O role foi implementado para não executar um `helm upgrade` desnecessariamente.
+The role avoids running `helm upgrade` unnecessarily.
 
-Antes de alterar o Cilium, o Ansible consulta a release:
+Before changing Cilium, Ansible queries the release:
 
 ```text
 helm list
 ```
 
-Depois consulta os valores:
+Then it reads the values:
 
 ```text
 helm get values
 ```
 
-O estado atual é comparado com o estado desejado.
+The current state is compared with the desired state.
 
-São avaliados:
+The comparison covers:
 
-- existência da release;
-- versão do chart;
+- whether the release exists;
+- the chart version;
 - `operator.hostNetwork`;
 - `operator.extraArgs`.
 
-Fluxo:
+Flow:
 
 ```text
                  Ansible
@@ -360,30 +398,30 @@ Fluxo:
                     ▼
               helm list
                     │
-             Release existe?
+             Release exists?
               │           │
-             não         sim
+             no          yes
               │           │
               │      helm get values
               │           │
-              │      comparar estado
+              │      compare state
               │           │
               └──────┬────┘
                      │
-              Estado diferente?
+              State differs?
                  │          │
-                sim        não
+                yes         no
                  │          │
             helm upgrade   skip
 ```
 
 ---
 
-# Validação de idempotência
+# Idempotency Validation
 
-Após a implementação, o playbook foi executado novamente sem modificar o cluster.
+After the implementation, the playbook was run again without changing the cluster.
 
-Resultado:
+Result:
 
 ```text
 TASK [kubernetes/cni : Check if Cilium Helm release exists]
@@ -399,7 +437,7 @@ TASK [kubernetes/cni : Install or upgrade Cilium CNI]
 skipping: [k8s-cp-01]
 ```
 
-Resultado final:
+Final result:
 
 ```text
 k8s-cp-01      changed=0 failed=0
@@ -407,21 +445,21 @@ k8s-worker-01  changed=0 failed=0
 k8s-worker-02  changed=0 failed=0
 ```
 
-Isso confirma que o role consegue executar novamente sem produzir alterações quando o estado desejado já está aplicado.
+This confirms the role can run again without changes when the desired state is already applied.
 
 ---
 
-# Validação do cluster
+# Cluster Validation
+
+The automated checks are in the `kubernetes/validation` role (`playbooks/kubernetes-validation.yml`). The manual commands below are useful for troubleshooting.
 
 ## Nodes
-
-Validar os nós:
 
 ```bash
 kubectl get nodes -o wide
 ```
 
-Resultado esperado:
+Expected:
 
 ```text
 NAME            STATUS   ROLES           VERSION
@@ -434,25 +472,21 @@ k8s-worker-02   Ready    <none>          v1.37.1
 
 ## Pods
 
-Validar todos os Pods:
-
 ```bash
 kubectl get pods -A -o wide
 ```
 
-Todos os componentes do `kube-system` devem estar em estado saudável.
+All `kube-system` components must be healthy.
 
 ---
 
 ## Cilium Operator
 
-Validar:
-
 ```bash
 kubectl -n kube-system get deployment cilium-operator
 ```
 
-Resultado esperado:
+Expected:
 
 ```text
 NAME              READY   UP-TO-DATE   AVAILABLE
@@ -463,27 +497,23 @@ cilium-operator   2/2     2            2
 
 ## Cilium Agents
 
-Validar:
-
 ```bash
 kubectl -n kube-system get pods \
   -l k8s-app=cilium \
   -o wide
 ```
 
-Deve existir um Cilium Agent em cada nó.
+There must be one Cilium Agent per node.
 
 ---
 
 ## Cilium status
 
-Executar:
-
 ```bash
 kubectl -n kube-system exec ds/cilium -- cilium status
 ```
 
-Indicadores importantes:
+Key indicators:
 
 ```text
 Kubernetes:       Ok
@@ -499,9 +529,9 @@ Cluster health:   3/3 reachable
 
 # Troubleshooting
 
-## Cilium Operator em CrashLoopBackOff
+## Cilium Operator in CrashLoopBackOff
 
-Verificar:
+Check:
 
 ```bash
 kubectl -n kube-system get pods \
@@ -509,7 +539,7 @@ kubectl -n kube-system get pods \
   -o wide
 ```
 
-Ver logs:
+Logs:
 
 ```bash
 kubectl -n kube-system logs \
@@ -517,7 +547,7 @@ kubectl -n kube-system logs \
   --tail=100
 ```
 
-Verificar o argumento:
+Check the argument:
 
 ```bash
 kubectl -n kube-system get deployment cilium-operator \
@@ -526,7 +556,7 @@ kubectl -n kube-system get deployment cilium-operator \
   | grep operator-api
 ```
 
-Esperado:
+Expected:
 
 ```text
 --operator-api-serve-addr=:9234
@@ -534,22 +564,22 @@ Esperado:
 
 ---
 
-## Cilium Operator não fica Ready
+## Cilium Operator is not Ready
 
-Verificar:
+Check:
 
 ```bash
 kubectl -n kube-system describe deployment cilium-operator
 ```
 
-E:
+And:
 
 ```bash
 kubectl -n kube-system get events \
   --sort-by=.lastTimestamp
 ```
 
-Verificar se o Operator está usando:
+Check that the Operator uses:
 
 ```yaml
 operator.hostNetwork: false
@@ -557,21 +587,21 @@ operator.hostNetwork: false
 
 ---
 
-## Erro `failed to find plugin cilium-cni`
+## Error `failed to find plugin cilium-cni`
 
-Verificar:
+Check:
 
 ```bash
 ls -l /opt/cni/bin/cilium-cni
 ```
 
-Verificar configuração do containerd:
+Check the containerd configuration:
 
 ```bash
 containerd config dump | grep -A6 -B2 'bin_dir'
 ```
 
-Esperado:
+Expected:
 
 ```text
 bin_dir = "/opt/cni/bin"
@@ -579,21 +609,21 @@ bin_dir = "/opt/cni/bin"
 
 ---
 
-## CoreDNS em ContainerCreating
+## CoreDNS in ContainerCreating
 
-Verificar:
+Check:
 
 ```bash
 kubectl -n kube-system get pods -l k8s-app=kube-dns
 ```
 
-Se estiver em `ContainerCreating`, verificar os eventos:
+If it is in `ContainerCreating`, check the events:
 
 ```bash
 kubectl -n kube-system describe pod <pod>
 ```
 
-Também verificar o CNI:
+Also check the CNI:
 
 ```bash
 ls -l /opt/cni/bin/
@@ -601,9 +631,9 @@ ls -l /opt/cni/bin/
 
 ---
 
-# Arquivos do role
+# Role Files
 
-Estrutura:
+Structure:
 
 ```text
 ansible/roles/kubernetes/cni/
@@ -625,9 +655,9 @@ ansible/roles/kubernetes/cni/
 
 ---
 
-# Execução
+# Execution
 
-O role é executado através do playbook Kubernetes:
+The role runs through the Kubernetes playbook:
 
 ```bash
 cd ansible
@@ -636,79 +666,81 @@ ansible-playbook playbooks/kubernetes.yml
 
 ---
 
-# Decisões de arquitetura
+# Architecture Decisions
 
-| Decisão | Escolha | Motivo |
+| Decision | Choice | Reason |
 |---|---|---|
-| CNI | Cilium | Networking moderno e recursos avançados |
-| Cilium version | 1.20.2 | Versão fixada para reprodutibilidade |
-| Helm | 4.3.0 | Versão fixada |
-| Operator replicas | 2 | Disponibilidade e distribuição |
-| Operator hostNetwork | false | Evitar dependência da rede do host |
-| Operator API | `:9234` | Permitir probes através da rede do Pod |
-| CNI bin directory | `/opt/cni/bin` | Compatibilidade com o binário instalado pelo Cilium |
-| Deployment | Ansible + Helm | IaC e gerenciamento declarativo |
-| Namespace | `kube-system` | Componentes de infraestrutura do cluster |
+| CNI | Cilium | Modern networking and advanced features |
+| Cilium version | 1.20.2 | Pinned for reproducibility |
+| Helm | 4.3.0 | Pinned |
+| Operator replicas | 2 (chart default) | Availability and distribution |
+| Operator hostNetwork | false | Avoid dependency on the host network |
+| Operator API | `:9234` | Allow probes through the Pod network |
+| CNI bin directory | `/opt/cni/bin` | Compatibility with the binary installed by Cilium |
+| kube-proxy | kept | kube-proxy replacement deferred (ADR-0002) |
+| IPAM | chart default cluster-pool | No Pod CIDR configured |
+| Deployment | Ansible + Helm | IaC and declarative management |
+| Namespace | `kube-system` | Cluster infrastructure components |
 
 ---
 
-# Compatibilidade
+# Compatibility
 
-O laboratório utiliza:
+The lab uses:
 
 ```text
 Kubernetes 1.37.1
 Cilium 1.20.2
 ```
 
-Essa combinação deve ser tratada como uma decisão específica do laboratório.
+This combination is a lab-specific decision.
 
-A versão do Cilium foi fixada para garantir reprodutibilidade e evitar atualizações automáticas.
+The Cilium version is pinned for reproducibility and to avoid automatic upgrades.
 
-Antes de atualizar qualquer uma das versões, deve-se validar a matriz oficial de compatibilidade entre Kubernetes e Cilium.
+Before upgrading either version, check the official Kubernetes and Cilium compatibility matrix.
 
 ---
 
-# Segurança
+# Security
 
-O kubeconfig utilizado pelo role é:
+The role uses the kubeconfig:
 
 ```text
 /etc/kubernetes/admin.conf
 ```
 
-Esse arquivo possui privilégios administrativos sobre o cluster.
+This file has administrative privileges over the cluster.
 
-Por isso:
+Therefore:
 
-- não deve ser versionado;
-- não deve ser copiado para o Git;
-- permissões devem permanecer restritas;
-- credenciais do cluster não devem ser armazenadas no repositório.
+- it must not be versioned;
+- it must not be copied to Git;
+- its permissions must stay restricted;
+- cluster credentials must not be stored in the repository.
 
----
-
-# Boas práticas aplicadas
-
-Este role segue algumas práticas importantes de ambientes profissionais:
-
-- versões fixadas;
-- configuração declarativa;
-- idempotência;
-- validação de pré-requisitos;
-- validação pós-instalação;
-- separação entre defaults e tasks;
-- troubleshooting documentado;
-- ausência de credenciais no Git;
-- configuração reproduzível;
-- integração com Ansible;
-- gerenciamento do Cilium através do Helm.
+The Helm installer script is downloaded from the `main` branch of the Helm repository at run time; the installed Helm version is pinned and asserted afterwards.
 
 ---
 
-# Portfólio
+# Practices Applied
 
-Este componente demonstra conhecimentos em:
+- pinned versions;
+- declarative configuration;
+- idempotency;
+- prerequisite validation;
+- post-installation validation;
+- separation between defaults and tasks;
+- documented troubleshooting;
+- no credentials in Git;
+- reproducible configuration;
+- Ansible integration;
+- Cilium managed through Helm.
+
+---
+
+# Portfolio
+
+This component demonstrates knowledge of:
 
 - Kubernetes;
 - CNI;
@@ -717,13 +749,13 @@ Este componente demonstra conhecimentos em:
 - Ansible;
 - containerd;
 - Linux networking;
-- troubleshooting Kubernetes;
+- Kubernetes troubleshooting;
 - IaC;
-- idempotência;
-- observabilidade de rede;
-- arquitetura de clusters.
+- idempotency;
+- network observability;
+- cluster architecture.
 
-O troubleshooting realizado durante a implementação também demonstra capacidade de diagnosticar problemas entre diferentes camadas da infraestrutura:
+The troubleshooting done during the implementation also shows the ability to diagnose problems across infrastructure layers:
 
 ```text
 Kubernetes
@@ -741,24 +773,24 @@ Kubernetes
 
 ---
 
-# Próximos passos
+# Next Steps
 
-Evoluções planejadas para o laboratório:
+Planned evolution:
 
-1. Validar DNS interno do Kubernetes;
-2. Validar comunicação Pod-to-Pod;
-3. Validar comunicação Pod-to-Service;
-4. Implementar NetworkPolicies;
-5. Explorar Hubble;
-6. Integrar métricas do Cilium ao Prometheus;
-7. Integrar dashboards ao Grafana;
-8. Avaliar recursos avançados do Cilium;
-9. Automatizar testes de rede no CI;
-10. Documentar a plataforma Kubernetes completa.
+1. Validate Pod-to-Pod connectivity in the `kubernetes/validation` role;
+2. Validate Pod-to-Service connectivity in the `kubernetes/validation` role;
+3. Implement NetworkPolicies;
+4. Deploy Hubble Relay and UI;
+5. Integrate Cilium metrics with Prometheus;
+6. Integrate dashboards with Grafana;
+7. Evaluate kube-proxy replacement and other advanced Cilium features;
+8. Automate network tests in CI.
+
+Internal DNS validation (Issue #34/#35) is done.
 
 ---
 
-# Referências
+# References
 
 - Cilium Documentation
 - Kubernetes Documentation

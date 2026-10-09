@@ -59,4 +59,4 @@ worker-04
 ...
 ```
 
-Worker provisioning will be automated with OpenTofu and Ansible.
+Worker provisioning is automated: add an entry to `kubernetes_vms` in `kubernetes/opentofu`, add the host to the `workers` group in `ansible/inventories/lab/hosts.ini`, and run `playbooks/kubernetes.yml`. A DHCP reservation and a `home.arpa` record are still created manually.

@@ -15,6 +15,8 @@ The initial topology is:
 
 The control plane contains local etcd.
 
+The cluster was initialized without `controlPlaneEndpoint`; the API is reached at `https://192.168.0.130:6443`.
+
 ## 3. Current Limitation
 
 The initial control plane is a single point of failure.
@@ -92,6 +94,7 @@ The odd number supports etcd quorum behavior.
 HA implementation will require:
 
 - three control plane VMs;
+- a `controlPlaneEndpoint` (kubeadm only allows joining more control planes when it was set at `kubeadm init`; the current cluster will need to be re-initialized or migrated);
 - API load balancing;
 - stable DNS;
 - etcd backup strategy;

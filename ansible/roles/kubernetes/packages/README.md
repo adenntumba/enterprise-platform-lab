@@ -532,36 +532,16 @@ k8s-worker-01
 k8s-worker-02
 ```
 
-All nodes are prepared for the next Kubernetes bootstrap stage.
+All nodes are prepared for the Kubernetes bootstrap.
 
 ---
 
-## Next Steps
-
-The next stage is the Kubernetes control plane bootstrap.
-
-The `kubernetes/control_plane` role will be responsible for:
+## Position in the Playbook
 
 ```text
-kubeadm
-   │
-   ▼
-Control Plane Initialization
-   │
-   ├── Kubernetes API Server
-   ├── Controller Manager
-   ├── Scheduler
-   └── etcd
+base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
+    -> kubernetes/control_plane -> kubernetes/worker -> kubernetes/cni -> kubernetes/dns
 ```
-
-After the control plane is operational, the worker role will be responsible for joining:
-
-```text
-k8s-worker-01
-k8s-worker-02
-```
-
-to the cluster.
 
 ---
 
@@ -569,11 +549,14 @@ to the cluster.
 
 ```text
 roles/kubernetes/
-├── common/
-├── containerd/
-├── packages/
-├── control_plane/
-└── worker/
+├── common/          Node prerequisites
+├── containerd/      Container runtime
+├── packages/        kubeadm, kubelet, kubectl
+├── control_plane/   kubeadm init
+├── worker/          kubeadm join
+├── cni/             Helm + Cilium
+├── dns/             CoreDNS configuration
+└── validation/      End-to-end checks (playbooks/kubernetes-validation.yml)
 ```
 
 The roles are intentionally separated to keep the Kubernetes infrastructure modular, testable, and maintainable.

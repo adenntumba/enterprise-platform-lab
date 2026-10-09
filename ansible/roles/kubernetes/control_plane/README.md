@@ -154,6 +154,8 @@ kubernetes_cluster_name: kubernetes
 
 Defines the logical Kubernetes cluster name.
 
+This variable is not passed to `kubeadm init` today, so it has no effect; `kubernetes` is also the kubeadm default cluster name. `kubernetes_kubeconfig_directory` and `kubernetes_kubelet_service` are likewise defined but not used by the tasks.
+
 ### Kubernetes Administrative Kubeconfig
 
 ```yaml
@@ -664,7 +666,7 @@ Node: NotReady
 CoreDNS: Pending
 ```
 
-The `NotReady` state is expected until the Pod network is configured.
+The `NotReady` state is expected until the Pod network is configured. In `playbooks/kubernetes.yml`, the `kubernetes/worker` role runs next, then `kubernetes/cni` deploys Cilium and all nodes become `Ready`.
 
 ---
 
@@ -684,34 +686,18 @@ Observability
 Applications
 ```
 
-These components are implemented in subsequent stages.
+CNI, workers and CoreDNS customization are implemented by the `cni`, `worker` and `dns` roles.
+
+Not configured by `kubeadm init` in this role: `controlPlaneEndpoint` (the API uses `https://192.168.0.130:6443`), Pod CIDR and Service CIDR (kubeadm default `10.96.0.0/12`). See the Implementation Notes in ADR-0002.
 
 ---
 
-## Next Steps
-
-The next Kubernetes platform stages will build on this control plane.
+## Position in the Playbook
 
 ```text
-#31 Bootstrap Control Plane
-          │
-          ▼
-#32 Deploy Kubernetes CNI
-          │
-          ▼
-#33 Join Kubernetes Workers
-          │
-          ▼
-#34 Configure Internal DNS
-          │
-          ▼
-#35 Validate Kubernetes Cluster
-          │
-          ▼
-#36 Document Kubernetes Platform
+base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
+    -> kubernetes/control_plane -> kubernetes/worker -> kubernetes/cni -> kubernetes/dns
 ```
-
-The control plane must remain healthy while these components are added incrementally.
 
 ---
 
@@ -719,11 +705,14 @@ The control plane must remain healthy while these components are added increment
 
 ```text
 roles/kubernetes/
-├── common/
-├── containerd/
-├── packages/
-├── control_plane/
-└── worker/
+├── common/          Node prerequisites
+├── containerd/      Container runtime
+├── packages/        kubeadm, kubelet, kubectl
+├── control_plane/   kubeadm init
+├── worker/          kubeadm join
+├── cni/             Helm + Cilium
+├── dns/             CoreDNS configuration
+└── validation/      End-to-end checks (playbooks/kubernetes-validation.yml)
 ```
 
 Each role has a specific responsibility in the Kubernetes platform lifecycle.

@@ -1,5 +1,13 @@
 # Epic — Engineering Quality Platform
 
+> **Status:** ⏳ Accepted, not started
+>
+> **Decision:** [ADR-0001](../adr/ADR-0001-engineering-quality-platform.md)
+>
+> **Last Updated:** 2026-10-08
+>
+> No GitHub issues have been created for this Epic yet, and `.github/workflows/` contains no workflows.
+
 ## Goal
 
 Build the Engineering Quality Platform responsible for validating every Pull Request automatically.
@@ -131,10 +139,8 @@ Manual reviews should become complementary rather than mandatory.
 
 ---
 
-# Relationship with Sprint 01
+# Relationship with the Sprints
 
-Sprint 01 remains open.
+This Epic was introduced during Sprint 01 with the intention of pausing Sprint 01 until it was completed.
 
-The Engineering Quality Platform is introduced as an enabling initiative.
-
-Once this Epic is completed, development returns to Sprint 01 starting from the next pending issue.
+That did not happen: Sprint 01 and Sprint 02 were completed without it. The Epic remains an enabling initiative to be scheduled before or alongside Sprint 03.
