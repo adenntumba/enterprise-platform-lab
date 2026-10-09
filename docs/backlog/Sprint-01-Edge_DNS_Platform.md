@@ -280,4 +280,3 @@ All Raspberry Pi hosts receive `base/linux` and `base/raspberry` through `playbo
 - Edge DNS runbook and standalone troubleshooting guide (`docs/runbooks/` has only the Kubernetes runbook). Troubleshooting content exists in the `pihole` role README.
 - Release `v0.2.0` has not been published.
 - Known limitation: the Pi-hole configuration tasks always report `changed` and restart `pihole-FTL` on every run.
-

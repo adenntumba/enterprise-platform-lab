@@ -205,4 +205,3 @@ Verification commands: [network-architecture.md](../architecture/kubernetes/netw
 Note on HA: kubeadm only supports adding control-plane nodes when `controlPlaneEndpoint` was set at `kubeadm init`. The planned HA evolution requires either re-initializing the cluster with the endpoint or a documented migration.
 
 Note on versions: Kubernetes v1.35 was announced as the last release to support containerd 1.x. The cluster runs and validates with containerd `1.7.24` and Kubernetes `v1.37.1`, but the combination should be reviewed.
-

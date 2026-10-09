@@ -160,4 +160,3 @@ This guarantees that every remaining feature will already benefit from automated
 - The `review-pr.md` prompt in `ai/prompts/` is still present.
 
 The Epic is tracked in [Epic-Engineering-Quality-Platform.md](../backlog/Epic-Engineering-Quality-Platform.md).
-

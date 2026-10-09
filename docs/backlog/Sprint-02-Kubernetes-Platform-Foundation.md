@@ -944,4 +944,3 @@ base/linux -> kubernetes/common -> kubernetes/containerd -> kubernetes/packages
 - Pod-to-pod and Pod-to-Service connectivity are not covered by the `validation` role (Cilium health checks cover node connectivity).
 - `k8s-api.home.arpa` endpoint.
 - Release `v0.3.0` has not been published.
-
